@@ -32,10 +32,12 @@ export const Layout = () => {
             </div>
 
             {/* User Menu */}
-            <Button variant="ghost" size="sm" className="rounded-full">
-              <User className="w-4 h-4 mr-2" />
-              username
-            </Button>
+            <Link to="/profile/username">
+              <Button variant="ghost" size="sm" className="rounded-full">
+                <User className="w-4 h-4 mr-2" />
+                username
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
