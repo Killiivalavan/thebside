@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthProvider";
 
 const Index = () => {
+  const { signInWithGoogle } = useAuth();
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="max-w-md mx-auto p-8">
@@ -19,7 +21,7 @@ const Index = () => {
           <Button 
             variant="outline" 
             className="w-full py-3 border-2 border-border hover:bg-accent"
-            onClick={() => window.location.href = '/discover'}
+            onClick={signInWithGoogle}
           >
             continue with google
           </Button>

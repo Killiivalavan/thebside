@@ -1,10 +1,12 @@
-import { Search, User } from "lucide-react";
+import { Search, User, LogOut } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
+import { useAuth } from "@/contexts/AuthProvider";
 
 export const Layout = () => {
   const location = useLocation();
+  const { user, signOut } = useAuth();
   
   return (
     <div className="min-h-screen bg-background">
@@ -32,12 +34,26 @@ export const Layout = () => {
             </div>
 
             {/* User Menu */}
-            <Link to="/profile/username">
-              <Button variant="ghost" size="sm" className="rounded-full">
-                <User className="w-4 h-4 mr-2" />
-                username
-              </Button>
-            </Link>
+            {user ? (
+              <div className="flex items-center gap-2">
+                <Link to={`/profile/${user.user_metadata?.user_name || user.email || "me"}`}>
+                  <Button variant="ghost" size="sm" className="rounded-full">
+                    <User className="w-4 h-4 mr-2" />
+                    {user.user_metadata?.full_name || user.email}
+                  </Button>
+                </Link>
+                <Button variant="outline" size="icon" onClick={signOut} aria-label="Sign out">
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <Link to="/">
+                <Button variant="ghost" size="sm" className="rounded-full">
+                  <User className="w-4 h-4 mr-2" />
+                  sign in
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </header>
