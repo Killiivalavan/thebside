@@ -1,15 +1,10 @@
-import { Search, User, LogOut } from "lucide-react";
+import { Search, User } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
-import { useAuth } from "@/contexts/AuthProvider";
-import { useUserProfile } from "@/hooks/useUserProfile";
 
 export const Layout = () => {
   const location = useLocation();
-  const { user, signOut } = useAuth();
-  const { profile, isLoading: profileLoading } = useUserProfile();
   
   return (
     <div className="min-h-screen bg-background">
@@ -37,35 +32,12 @@ export const Layout = () => {
             </div>
 
             {/* User Menu */}
-            {user ? (
-              <div className="flex items-center gap-2">
-                <Link to={`/profile/${profile?.username || "me"}`}>
-                  <Button variant="ghost" size="sm" className="rounded-full flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.username || "User"} />
-                      <AvatarFallback className="text-xs">
-                        {profile?.username ? profile.username.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase() || "U"}
-                      </AvatarFallback>
-                    </Avatar>
-                    {profileLoading ? (
-                      <span className="animate-pulse">Loading...</span>
-                    ) : (
-                      profile?.username || user.email?.split('@')[0] || "User"
-                    )}
-                  </Button>
-                </Link>
-                <Button variant="outline" size="icon" onClick={signOut} aria-label="Sign out">
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              </div>
-            ) : (
-              <Link to="/">
-                <Button variant="ghost" size="sm" className="rounded-full">
-                  <User className="w-4 h-4 mr-2" />
-                  sign in
-                </Button>
-              </Link>
-            )}
+            <Link to="/profile/username">
+              <Button variant="ghost" size="sm" className="rounded-full">
+                <User className="w-4 h-4 mr-2" />
+                username
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
