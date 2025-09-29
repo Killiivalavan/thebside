@@ -4,11 +4,12 @@ interface AlbumCardProps {
   id: string;
   title: string;
   artist: string;
+  artistId?: string;
   imageUrl?: string;
   size?: "sm" | "md" | "lg";
 }
 
-export const AlbumCard = ({ id, title, artist, imageUrl, size = "md" }: AlbumCardProps) => {
+export const AlbumCard = ({ id, title, artist, artistId, imageUrl, size = "md" }: AlbumCardProps) => {
   const sizeClasses = {
     sm: "w-20 h-20",
     md: "w-32 h-32",
@@ -37,12 +38,18 @@ export const AlbumCard = ({ id, title, artist, imageUrl, size = "md" }: AlbumCar
           >
             {title}
           </Link>
-          <Link 
-            to={`/artist/${artist.toLowerCase().replace(/\s+/g, '-')}`}
-            className="text-muted-foreground hover:text-foreground transition-colors block truncate"
-          >
-            {artist}
-          </Link>
+          {artistId ? (
+            <Link 
+              to={`/artist/${artistId}`}
+              className="text-muted-foreground hover:text-foreground transition-colors block truncate"
+            >
+              {artist}
+            </Link>
+          ) : (
+            <span className="text-muted-foreground block truncate">
+              {artist}
+            </span>
+          )}
         </div>
       )}
     </div>

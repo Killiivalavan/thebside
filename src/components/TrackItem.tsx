@@ -5,11 +5,12 @@ interface TrackItemProps {
   id: string;
   title: string;
   artist: string;
+  artistId?: string;
   duration: string;
   albumId?: string;
 }
 
-export const TrackItem = ({ id, title, artist, duration, albumId }: TrackItemProps) => {
+export const TrackItem = ({ id, title, artist, artistId, duration, albumId }: TrackItemProps) => {
   return (
     <div className="flex items-center justify-between p-3 bg-card border border-border rounded-lg hover:bg-accent transition-colors group">
       <div className="flex items-center space-x-3 flex-1">
@@ -24,12 +25,18 @@ export const TrackItem = ({ id, title, artist, duration, albumId }: TrackItemPro
           >
             {title}
           </Link>
-          <Link 
-            to={`/artist/${artist.toLowerCase().replace(/\s+/g, '-')}`}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors block truncate"
-          >
-            {artist}
-          </Link>
+          {artistId ? (
+            <Link 
+              to={`/artist/${artistId}`}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors block truncate"
+            >
+              {artist}
+            </Link>
+          ) : (
+            <span className="text-sm text-muted-foreground block truncate">
+              {artist}
+            </span>
+          )}
         </div>
       </div>
       

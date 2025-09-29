@@ -1,6 +1,37 @@
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 const Index = () => {
+  const { signInWithGoogle, user, loading } = useAuth();
+  const navigate = useNavigate();
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  useEffect(() => {
+    if (user && !loading) {
+      navigate('/discover');
+    }
+  }, [user, loading, navigate]);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsSigningIn(true);
+      await signInWithGoogle();
+    } catch (error) {
+      console.error('Failed to sign in:', error);
+      setIsSigningIn(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="max-w-md mx-auto p-8">
@@ -19,9 +50,10 @@ const Index = () => {
           <Button 
             variant="outline" 
             className="w-full py-3 border-2 border-border hover:bg-accent"
-            onClick={() => window.location.href = '/discover'}
+            onClick={handleGoogleSignIn}
+            disabled={isSigningIn}
           >
-            continue with google
+            {isSigningIn ? 'Signing in...' : 'continue with google'}
           </Button>
         </div>
       </div>
