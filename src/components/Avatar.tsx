@@ -23,44 +23,12 @@ const iconSizes = {
   xl: 'w-8 h-8'
 };
 
-// Cache for processed avatar URLs
-const avatarCache = new Map<string, string>();
-
-// Process Google avatar URL to be less likely to be rate-limited
-const processGoogleAvatarUrl = (url: string): string => {
+// Build a Google avatar URL with an explicit size to reduce dynamic resizing/rate-limits
+const buildGoogleAvatarUrl = (url: string, size: 'sm' | 'md' | 'lg' | 'xl'): string => {
   if (!url.includes('googleusercontent.com')) return url;
-  
-  // Remove size parameters and add proper ones
+  const pixelSize = size === 'sm' ? 64 : size === 'md' ? 96 : size === 'lg' ? 128 : 192;
   const cleanUrl = url.split('=')[0];
-  const size = sizeClasses.sm.includes('w-6') ? '96' : '128';
-  return `${cleanUrl}=s${size}-c`;
-};
-
-// Download and cache avatar to prevent repeated requests
-const downloadAndCacheAvatar = async (url: string): Promise<string> => {
-  if (avatarCache.has(url)) {
-    return avatarCache.get(url)!;
-  }
-
-  try {
-    const processedUrl = processGoogleAvatarUrl(url);
-    const response = await fetch(processedUrl, {
-      mode: 'cors',
-      cache: 'force-cache'
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch avatar');
-    }
-    
-    const blob = await response.blob();
-    const cachedUrl = URL.createObjectURL(blob);
-    avatarCache.set(url, cachedUrl);
-    return cachedUrl;
-  } catch (error) {
-    console.warn('Failed to cache avatar:', error);
-    return url; // Fall back to original URL
-  }
+  return `${cleanUrl}=s${pixelSize}-c`;
 };
 
 export const Avatar = ({ 
@@ -85,21 +53,9 @@ export const Avatar = ({
     setImageLoading(true);
     setImageError(false);
 
-    // For Google URLs, try to cache them
-    if (src.includes('googleusercontent.com')) {
-      downloadAndCacheAvatar(src)
-        .then(cachedUrl => {
-          setProcessedSrc(cachedUrl);
-          setImageLoading(false);
-        })
-        .catch(() => {
-          setProcessedSrc(src);
-          setImageLoading(false);
-        });
-    } else {
-      setProcessedSrc(src);
-      setImageLoading(false);
-    }
+    const finalUrl = buildGoogleAvatarUrl(src, size);
+    setProcessedSrc(finalUrl);
+    setImageLoading(false);
   }, [src]);
 
   // If no src or image failed to load, show fallback
@@ -117,6 +73,9 @@ export const Avatar = ({
         src={processedSrc}
         alt={alt}
         className="w-full h-full object-cover"
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
         onLoad={() => setImageLoading(false)}
         onError={() => {
           setImageError(true);

@@ -1,11 +1,12 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { fetchSpotifyJson } from '../_shared/spotify.ts';
+import { fetchAndStructureReviewThreads } from '../_shared/reviews.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 serve(async (req) => {
@@ -15,14 +16,29 @@ serve(async (req) => {
 
   try {
     const { id } = await req.json();
-
     if (!id) {
       throw new Error('Track ID is required');
     }
 
-    const trackData = await fetchSpotifyJson<any>(`https://api.spotify.com/v1/tracks/${id}`);
+    // Create a Supabase client with the service role key
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
 
-    return new Response(JSON.stringify(trackData), {
+    // Fetch track data from Spotify and review threads from Supabase in parallel
+    const [trackData, reviewThreads] = await Promise.all([
+      fetchSpotifyJson<any>(`https://api.spotify.com/v1/tracks/${id}`),
+      fetchAndStructureReviewThreads(supabaseAdmin, id),
+    ]);
+
+    // Combine the data
+    const responsePayload = {
+      ...trackData,
+      reviews: reviewThreads,
+    };
+
+    return new Response(JSON.stringify(responsePayload), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

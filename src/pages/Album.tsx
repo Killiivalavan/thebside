@@ -1,57 +1,77 @@
 import { useParams, Link } from "react-router-dom";
 import { TrackItem } from "@/components/TrackItem";
-import { ReviewCard } from "@/components/ReviewCard";
+import { ReviewThread, ReviewThread as ReviewThreadType } from "@/components/ReviewThread"; // Import component and type
 import { useSpotifyAlbum } from "@/hooks/useSpotify";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { Star } from "lucide-react";
 
 const Album = () => {
-  const { id } = useParams();
-  const { data: albumData, isLoading, error } = useSpotifyAlbum(id || "");
+  const { id } = useParams<{ id: string }>();
+  const { data: albumData, isLoading, error, refetch } = useSpotifyAlbum(id!);
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const [reviewText, setReviewText] = useState('');
+  const [rating, setRating] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleReviewSubmit = async () => {
+    if (!user || !reviewText.trim() || rating === 0) {
+      toast({
+        title: 'Error',
+        description: 'Please write a review and select a rating.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    const { error } = await supabase.functions.invoke('create-review', {
+      body: {
+        item_id: id,
+        item_type: 'album',
+        review_text: reviewText,
+        rating: rating,
+      },
+    });
+    setIsSubmitting(false);
+
+    if (error) {
+      toast({
+        title: 'Error submitting review',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      setReviewText('');
+      setRating(0);
+      toast({
+        title: 'Review posted!',
+      });
+      refetch(); // Refetch data to show the new review
+    }
+  };
+
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold text-foreground">album page</h1>
-        </div>
-        <div className="text-center text-muted-foreground">Loading album details...</div>
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  if (error || !albumData) {
-    return (
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold text-foreground">album page</h1>
-        </div>
-        <div className="text-center text-red-500">Error loading album. Please try again later.</div>
-      </div>
-    );
+  if (error) {
+    return <div>Error: {error.message}</div>;
   }
 
-  const formatDuration = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const totalDurationMs = albumData.tracks?.items?.reduce((acc: number, track: any) => acc + track.duration_ms, 0) || 0;
-  const totalMinutes = Math.floor(totalDurationMs / 60000);
-  const totalSeconds = Math.floor((totalDurationMs % 60000) / 1000);
-  
-  // Mock reviews - will be replaced with real reviews from database
-  const reviews = [
-    {
-      username: "username",
-      rating: 5,
-      review: "blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah",
-    },
-    {
-      username: "username",
-      rating: 4,
-      review: "blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah",
-    },
-  ];
+  // The data from the hook now contains a 'reviews' property
+  const reviews: ReviewThreadType[] = albumData?.reviews || [];
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -62,30 +82,22 @@ const Album = () => {
 
       {/* Album Info */}
       <div className="flex space-x-8">
-        <div className="w-48 h-48 bg-muted border-2 border-border rounded-lg flex-shrink-0 overflow-hidden">
-          {albumData.images?.[0]?.url && (
-            <img 
-              src={albumData.images[0].url} 
-              alt={albumData.name}
-              className="w-full h-full object-cover"
-            />
-          )}
-        </div>
+        <img src={albumData.images[0].url} alt={albumData.name} className="w-48 h-48 bg-muted border-2 border-border rounded-lg flex-shrink-0" />
         
         <div className="flex-1 space-y-4">
           <div>
             <h2 className="text-3xl font-bold text-foreground">{albumData.name}</h2>
             <Link 
-              to={`/artist/${albumData.artists?.[0]?.id}`}
+              to={`/artist/${albumData.artists[0].id}`}
               className="text-xl text-muted-foreground hover:text-foreground transition-colors"
             >
-              {albumData.artists?.[0]?.name}
+              {albumData.artists[0].name}
             </Link>
             <div className="text-muted-foreground mt-2">
-              {albumData.release_date?.split('-')[0]}
+              {new Date(albumData.release_date).getFullYear()}
             </div>
             <div className="text-muted-foreground">
-              {albumData.total_tracks} tracks • {totalMinutes} mins {totalSeconds} secs
+              {albumData.total_tracks} tracks
             </div>
           </div>
         </div>
@@ -96,15 +108,15 @@ const Album = () => {
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-foreground">Track Listing</h3>
           <div className="space-y-2">
-            {albumData.tracks?.items?.map((track: any) => (
+            {albumData.tracks.items.map((track: any) => (
               <TrackItem
                 key={track.id}
                 id={track.id}
                 title={track.name}
-                artist={track.artists?.map((a: any) => a.name).join(", ")}
-                artistId={track.artists?.[0]?.id}
-                duration={formatDuration(track.duration_ms)}
-                albumId={id}
+                artist={track.artists.map((a: any) => a.name).join(', ')}
+                artistId={track.artists[0].id}
+                duration={new Date(track.duration_ms).toISOString().substr(14, 5)}
+                albumId={albumData.id}
               />
             ))}
           </div>
@@ -113,18 +125,48 @@ const Album = () => {
         {/* Reviews */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-foreground">popular reviews</h3>
+            <h3 className="text-lg font-semibold text-foreground">Reviews</h3>
           </div>
+
+          {/* Form to write a new top-level review */}
+          {user && (
+            <div className="space-y-2 p-4 border rounded-lg">
+              <Textarea 
+                placeholder="Write a review..."
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                className="bg-transparent border-0 focus:ring-0 px-0"
+              />
+              <div className="flex items-center justify-between pt-2 border-t">
+                {/* Simple star rating */}
+                <div className="flex space-x-1">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button key={star} onClick={() => setRating(star)} className="focus:outline-none">
+                      <Star className={`w-6 h-6 transition-colors ${rating >= star ? 'fill-primary text-primary' : 'text-muted-foreground hover:text-primary'}`} />
+                    </button>
+                  ))}
+                </div>
+                <Button onClick={handleReviewSubmit} disabled={isSubmitting}>
+                  {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                </Button>
+              </div>
+            </div>
+          )}
           
           <div className="space-y-6">
-            {reviews.map((review, index) => (
-              <ReviewCard
-                key={index}
-                username={review.username}
-                rating={review.rating}
-                review={review.review}
-              />
-            ))}
+            {reviews.length > 0 ? (
+              reviews.map((review) => (
+                <ReviewThread
+                  key={review.id}
+                  review={review}
+                  item_id={id!}
+                  item_type="album"
+                  onReplySuccess={refetch}
+                />
+              ))
+            ) : (
+              <p className="text-muted-foreground text-center py-4">No reviews yet. Be the first!</p>
+            )}
           </div>
         </div>
       </div>
