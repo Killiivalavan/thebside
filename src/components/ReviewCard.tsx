@@ -1,13 +1,15 @@
 import { Star, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface ReviewCardProps {
   username: string;
   rating: number;
   review: string;
   userAvatar?: string;
+  is_relisten?: boolean;
 }
 
-export const ReviewCard = ({ username, rating, review, userAvatar }: ReviewCardProps) => {
+export const ReviewCard = ({ username, rating, review, userAvatar, is_relisten }: ReviewCardProps) => {
   return (
     <div className="border-b border-border pb-4 mb-4 last:border-b-0">
       <div className="flex items-start space-x-3">
@@ -22,6 +24,7 @@ export const ReviewCard = ({ username, rating, review, userAvatar }: ReviewCardP
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2 mb-2">
             <span className="font-medium text-foreground">{username}</span>
+            {is_relisten && <Badge variant="outline">Relisten</Badge>}
             <div className="flex space-x-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star

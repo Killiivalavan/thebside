@@ -28,7 +28,7 @@ serve(async (req) => {
       });
     }
 
-    const { item_id, item_type, rating, review_text, parent_id } = await req.json();
+    const { item_id, item_type, rating, review_text, parent_id, is_private, is_relisten } = await req.json();
 
     if (!item_id || !item_type) {
       throw new Error('Missing required fields: item_id and item_type are required.');
@@ -49,6 +49,8 @@ serve(async (req) => {
       rating: isReply ? null : rating,
       review_text,
       parent_id: parent_id || null,
+      is_private: is_private || false,
+      is_relisten: is_relisten || false,
     };
 
     const { data, error } = await supabase

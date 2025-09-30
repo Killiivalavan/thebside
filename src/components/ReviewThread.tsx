@@ -17,6 +17,8 @@ export type ReviewWithUser = {
   user_id: string;
   username: string;
   avatar_url: string | null;
+  is_relisten?: boolean;
+  is_private?: boolean;
 };
 
 // The final nested structure that the component will receive
@@ -94,6 +96,7 @@ export const ReviewThread = ({ review, item_id, item_type, onReplySuccess }: Rev
         rating={review.rating}
         review={review.review_text || ''}
         userAvatar={review.avatar_url || undefined}
+        is_relisten={review.is_relisten}
       />
       <div className="ml-4 mb-4 flex items-center gap-2">
         {user && (

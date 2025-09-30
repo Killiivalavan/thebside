@@ -20,10 +20,11 @@ serve(async (req) => {
       throw new Error('Artist ID is required');
     }
 
-    // Create a Supabase client with the service role key
-    const supabaseAdmin = createClient(
+    // Create a Supabase client with the user's auth token to enforce RLS
+    const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
     const marketParam = market || Deno.env.get('SPOTIFY_DEFAULT_MARKET') || 'US';
@@ -38,7 +39,7 @@ serve(async (req) => {
       fetchSpotifyJson<any>(`https://api.spotify.com/v1/artists/${id}`),
       fetchSpotifyJson<any>(`https://api.spotify.com/v1/artists/${id}/top-tracks?market=${encodeURIComponent(marketParam)}`),
       fetchSpotifyJson<any>(`https://api.spotify.com/v1/artists/${id}/albums?include_groups=album,single&limit=50`),
-      fetchAndStructureReviewThreads(supabaseAdmin, id)
+      fetchAndStructureReviewThreads(supabase, id)
     ]);
 
     // Combine the data

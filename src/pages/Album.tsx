@@ -9,6 +9,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Star } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 const Album = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +22,8 @@ const Album = () => {
   const [reviewText, setReviewText] = useState('');
   const [rating, setRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRelisten, setIsRelisten] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   const handleReviewSubmit = async () => {
     if (!user || !reviewText.trim() || rating === 0) {
@@ -37,6 +42,8 @@ const Album = () => {
         item_type: 'album',
         review_text: reviewText,
         rating: rating,
+        is_relisten: isRelisten,
+        is_private: isPrivate,
       },
     });
     setIsSubmitting(false);
@@ -50,6 +57,8 @@ const Album = () => {
     } else {
       setReviewText('');
       setRating(0);
+      setIsRelisten(false);
+      setIsPrivate(false);
       toast({
         title: 'Review posted!',
       });
@@ -130,14 +139,26 @@ const Album = () => {
 
           {/* Form to write a new top-level review */}
           {user && (
-            <div className="space-y-2 p-4 border rounded-lg">
+            <div className="space-y-4 p-4 border rounded-lg">
               <Textarea 
                 placeholder="Write a review..."
                 value={reviewText}
                 onChange={(e) => setReviewText(e.target.value)}
-                className="bg-transparent border-0 focus:ring-0 px-0"
+                className="bg-transparent"
               />
-              <div className="flex items-center justify-between pt-2 border-t">
+              <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="isRelisten" checked={isRelisten} onCheckedChange={(checked) => setIsRelisten(Boolean(checked))} />
+                    <Label htmlFor="isRelisten">Relisten</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch id="isPrivate" checked={isPrivate} onCheckedChange={setIsPrivate} />
+                    <Label htmlFor="isPrivate">Private</Label>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between pt-2">
                 {/* Simple star rating */}
                 <div className="flex space-x-1">
                   {[1, 2, 3, 4, 5].map(star => (

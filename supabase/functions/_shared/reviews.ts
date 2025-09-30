@@ -11,6 +11,8 @@ export interface Review {
   user_id: string;
   username: string;
   avatar_url: string | null;
+  is_relisten?: boolean;
+  is_private?: boolean;
 }
 
 // Type for the nested structure we want to create
