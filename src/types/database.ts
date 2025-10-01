@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       list_items: {
@@ -152,7 +177,7 @@ export type Database = {
           item_id: string
           item_type: Database["public"]["Enums"]["item_type"]
           parent_id: string | null
-          rating: number
+          rating: number | null
           review_text: string | null
           user_id: string
         }
@@ -164,7 +189,7 @@ export type Database = {
           item_id: string
           item_type: Database["public"]["Enums"]["item_type"]
           parent_id?: string | null
-          rating: number
+          rating?: number | null
           review_text?: string | null
           user_id: string
         }
@@ -176,7 +201,7 @@ export type Database = {
           item_id?: string
           item_type?: Database["public"]["Enums"]["item_type"]
           parent_id?: string | null
-          rating?: number
+          rating?: number | null
           review_text?: string | null
           user_id?: string
         }
@@ -226,6 +251,31 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      backfill_missing_user_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      delete_review: {
+        Args: { p_review_id: string }
+        Returns: Json
+      }
+      get_review_threads_for_item: {
+        Args: { p_item_id: string }
+        Returns: {
+          avatar_url: string
+          created_at: string
+          id: string
+          is_liked_by_me: boolean
+          is_private: boolean
+          is_relisten: boolean
+          like_count: number
+          parent_id: string
+          rating: number
+          review_text: string
+          user_id: string
+          username: string
+        }[]
+      }
       get_reviews_with_likes: {
         Args: {
           p_item_id: string
@@ -253,6 +303,18 @@ export type Database = {
           email: string
           id: string
           username: string
+        }[]
+      }
+      slugify_base: {
+        Args: { input: string }
+        Returns: string
+      }
+      toggle_review_like: {
+        Args: { p_review_id: string }
+        Returns: {
+          is_liked_by_me: boolean
+          like_count: number
+          review_id: string
         }[]
       }
     }
@@ -385,6 +447,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       item_type: ["album", "track", "artist"],

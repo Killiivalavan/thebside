@@ -16,9 +16,8 @@ const Profile = () => {
   const { data: lists, isLoading: listsLoading } = useUserLists(profileData?.id || '');
   const { data: listeningHistory, isLoading: historyLoading } = useUserListeningHistory(profileData?.id || '');
 
-  // Check if this is the current user's profile
-  const isOwnProfile = currentUser?.email?.split('@')[0] === username || 
-                      currentUser?.user_metadata?.username === username;
+  // Check if this is the current user's profile using id match when data is available
+  const isOwnProfile = Boolean(currentUser && profileData && currentUser.id === profileData.id);
 
   if (profileLoading) {
     return (

@@ -13,6 +13,8 @@ export interface Review {
   avatar_url: string | null;
   is_relisten?: boolean;
   is_private?: boolean;
+  like_count: number; // aggregated like count
+  is_liked_by_me: boolean; // caller's like state
 }
 
 // Type for the nested structure we want to create

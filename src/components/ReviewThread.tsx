@@ -19,6 +19,8 @@ export type ReviewWithUser = {
   avatar_url: string | null;
   is_relisten?: boolean;
   is_private?: boolean;
+  like_count: number;
+  is_liked_by_me: boolean;
 };
 
 // The final nested structure that the component will receive
@@ -40,6 +42,9 @@ export const ReviewThread = ({ review, item_id, item_type, onReplySuccess }: Rev
   const [replyText, setReplyText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [likeBusy, setLikeBusy] = useState(false);
+  const [isLiked, setIsLiked] = useState<boolean>(review.is_liked_by_me);
+  const [likeCount, setLikeCount] = useState<number>(review.like_count);
 
   const handleReplySubmit = async () => {
     if (!user || !replyText.trim()) return;
@@ -89,6 +94,37 @@ export const ReviewThread = ({ review, item_id, item_type, onReplySuccess }: Rev
     }
   };
 
+  const handleToggleLike = async () => {
+    if (!user) {
+      toast({ title: 'Please sign in to like reviews' });
+      return;
+    }
+    if (likeBusy) return;
+    setLikeBusy(true);
+
+    // Optimistic update
+    const prevLiked = isLiked;
+    const prevCount = likeCount;
+    setIsLiked(!prevLiked);
+    setLikeCount(prevCount + (prevLiked ? -1 : 1));
+
+    const { data, error } = await supabase.rpc('toggle_review_like', { p_review_id: review.id });
+    setLikeBusy(false);
+
+    if (error) {
+      // rollback
+      setIsLiked(prevLiked);
+      setLikeCount(prevCount);
+      toast({ title: 'Failed to update like', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    if (data && Array.isArray(data) && data[0]) {
+      setIsLiked(Boolean(data[0].is_liked_by_me));
+      setLikeCount(Number(data[0].like_count));
+    }
+  };
+
   return (
     <div className="flex flex-col">
       <ReviewCard
@@ -97,6 +133,10 @@ export const ReviewThread = ({ review, item_id, item_type, onReplySuccess }: Rev
         review={review.review_text || ''}
         userAvatar={review.avatar_url || undefined}
         is_relisten={review.is_relisten}
+        isLiked={isLiked}
+        likeCount={likeCount}
+        onToggleLike={handleToggleLike}
+        likeBusy={likeBusy}
       />
       <div className="ml-4 mb-4 flex items-center gap-2">
         {user && (

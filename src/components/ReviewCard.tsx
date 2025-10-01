@@ -1,4 +1,4 @@
-import { Star, User } from "lucide-react";
+import { Star, User, Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface ReviewCardProps {
@@ -7,9 +7,13 @@ interface ReviewCardProps {
   review: string;
   userAvatar?: string;
   is_relisten?: boolean;
+  isLiked?: boolean;
+  likeCount?: number;
+  onToggleLike?: () => void;
+  likeBusy?: boolean;
 }
 
-export const ReviewCard = ({ username, rating, review, userAvatar, is_relisten }: ReviewCardProps) => {
+export const ReviewCard = ({ username, rating, review, userAvatar, is_relisten, isLiked, likeCount, onToggleLike, likeBusy }: ReviewCardProps) => {
   return (
     <div className="border-b border-border pb-4 mb-4 last:border-b-0">
       <div className="flex items-start space-x-3">
@@ -41,9 +45,20 @@ export const ReviewCard = ({ username, rating, review, userAvatar, is_relisten }
           
           <p className="text-sm text-foreground leading-relaxed">{review}</p>
           
-          <button className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-2">
-            like
-          </button>
+          {onToggleLike && (
+            <button
+              type="button"
+              aria-pressed={Boolean(isLiked)}
+              disabled={likeBusy}
+              onClick={onToggleLike}
+              className={`mt-2 inline-flex items-center gap-1 text-xs transition-colors ${
+                isLiked ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              } ${likeBusy ? "opacity-70 cursor-not-allowed" : ""}`}
+            >
+              <Heart className={`w-3.5 h-3.5 ${isLiked ? "fill-primary" : ""}`} />
+              <span>{likeCount ?? 0}</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

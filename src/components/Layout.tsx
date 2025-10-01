@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar as AvatarComponent } from "@/components/Avatar";
 import { useState, useRef } from "react";
+import { useCurrentUserProfile } from "@/hooks/useProfile";
 
 export const Layout = () => {
   const location = useLocation();
@@ -39,9 +40,10 @@ export const Layout = () => {
     }
   };
 
-  // Get username from user metadata or email
-  const username = user?.user_metadata?.username || user?.email?.split('@')[0] || 'user';
-  const avatarUrl = user?.user_metadata?.avatar_url;
+  // Prefer canonical DB username if available
+  const { data: currentProfile } = useCurrentUserProfile();
+  const username = currentProfile?.username || user?.user_metadata?.username || user?.email?.split('@')[0] || 'user';
+  const avatarUrl = currentProfile?.avatar_url || user?.user_metadata?.avatar_url;
 
   return (
     <div className="min-h-screen bg-background">
@@ -85,7 +87,7 @@ export const Layout = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link to={`/profile/${username}`} className="w-full cursor-pointer">
+                  <Link to={`/profile/${encodeURIComponent(username)}`} className="w-full cursor-pointer">
                     <User className="w-4 h-4 mr-2" />
                     Profile
                   </Link>

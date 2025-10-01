@@ -14,15 +14,14 @@ export const useUserProfile = (username?: string) => {
         .from('users')
         .select('*')
         .eq('username', username)
-        .single();
+        .maybeSingle();
         
-      if (error) {
-        throw new Error(error.message);
-      }
+      if (error) throw new Error(error.message);
       
       return data;
     },
     enabled: !!username,
+    retry: false,
   });
 };
 
