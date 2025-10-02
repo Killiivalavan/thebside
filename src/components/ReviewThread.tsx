@@ -137,32 +137,24 @@ export const ReviewThread = ({ review, item_id, item_type, onReplySuccess }: Rev
         likeCount={likeCount}
         onToggleLike={handleToggleLike}
         likeBusy={likeBusy}
+        onReplyClick={() => setIsReplying(!isReplying)}
+        isReplying={isReplying}
+        canDelete={Boolean(user && user.id === review.user_id)}
+        onDelete={handleDelete}
+        deleting={isDeleting}
       />
-      <div className="ml-4 mb-4 flex items-center gap-2">
-        {user && (
-          <Button variant="ghost" size="sm" onClick={() => setIsReplying(!isReplying)}>
-            {isReplying ? 'Cancel' : 'Reply'}
+      {isReplying && (
+        <div className="ml-4 mb-4 mt-2 space-y-2">
+          <Textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            placeholder={`Replying to ${review.username}...`}
+          />
+          <Button onClick={handleReplySubmit} disabled={isSubmitting || !replyText.trim()}>
+            {isSubmitting ? 'Posting...' : 'Post Reply'}
           </Button>
-        )}
-        {user && user.id === review.user_id && (
-          <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? 'Deleting...' : 'Delete'}
-          </Button>
-        )}
-
-        {isReplying && (
-          <div className="mt-2 space-y-2">
-            <Textarea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder={`Replying to ${review.username}...`}
-            />
-            <Button onClick={handleReplySubmit} disabled={isSubmitting || !replyText.trim()}>
-              {isSubmitting ? 'Posting...' : 'Post Reply'}
-            </Button>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {review.children && review.children.length > 0 && (
         <div className="pl-6 border-l-2 border-border ml-4">

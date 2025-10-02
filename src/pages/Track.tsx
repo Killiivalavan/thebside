@@ -121,12 +121,24 @@ const Track = () => {
             <div className="space-y-4">
               <div>
                 <h2 className="text-2xl font-bold text-foreground">{trackData.name}</h2>
-                <Link 
-                  to={`/artist/${trackData.artists?.[0]?.id}`}
-                  className="text-lg text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {trackData.artists?.map((a: any) => a.name).join(", ")}
-                </Link>
+                <div className="text-lg text-muted-foreground">
+                  {(trackData.artists || []).map((a: any, idx: number) => (
+                    <span key={a?.id || `${a?.name}-${idx}`}>
+                      {idx > 0 && <span>, </span>}
+                      {a?.id ? (
+                        <Link
+                          to={`/artist/${a.id}`}
+                          aria-label={`View artist ${a?.name || 'Artist'}`}
+                          className="hover:text-foreground transition-colors"
+                        >
+                          {a?.name || 'Artist'}
+                        </Link>
+                      ) : (
+                        <span>{a?.name || 'Artist'}</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
               </div>
               <div className="text-muted-foreground space-y-1">
                 <div>{trackData.album?.release_date?.split('-')[0]}</div>

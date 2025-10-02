@@ -169,8 +169,7 @@ const Album = () => {
                   key={track.id}
                   id={track.id}
                   title={track.name}
-                  artist={track.artists.map((a: any) => a.name).join(', ')}
-                  artistId={track.artists[0].id}
+                  artists={track.artists.map((a: any) => ({ id: a.id, name: a.name }))}
                   duration={new Date(track.duration_ms).toISOString().substr(14, 5)}
                   albumId={albumData.id}
                 />

@@ -148,7 +148,13 @@ const Artist = () => {
             <h3 className="text-lg font-semibold text-foreground">Popular Tracks</h3>
             <div className="space-y-2">
               {artistData.top_tracks?.slice(0, 5).map((track: any) => (
-                <TrackItem key={track.id} id={track.id} title={track.name} artist={track.artists?.map((a: any) => a.name).join(", ")} artistId={track.artists?.[0]?.id} duration={formatDuration(track.duration_ms)} />
+                <TrackItem
+                  key={track.id}
+                  id={track.id}
+                  title={track.name}
+                  artists={track.artists?.map((a: any) => ({ id: a.id, name: a.name }))}
+                  duration={formatDuration(track.duration_ms)}
+                />
               ))}
             </div>
           </div>

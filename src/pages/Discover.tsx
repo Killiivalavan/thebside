@@ -46,7 +46,7 @@ const Discover = () => {
       {albums.length > 0 && (
         <section>
           <h2 className="text-lg font-medium text-foreground mb-4">popular albums</h2>
-          <div className="grid grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
             {albums.map((album: any) => (
               <AlbumCard
                 key={album.id}
@@ -65,10 +65,10 @@ const Discover = () => {
       {tracks.length > 0 && (
         <section>
           <h2 className="text-lg font-medium text-foreground mb-4">popular tracks</h2>
-          <div className="grid grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
             {tracks.map((track: any) => (
               <Link key={track.id} to={`/track/${track.id}`}>
-                <div className="bg-card border border-border rounded-lg p-4 hover:border-foreground transition-colors">
+                <div className="bg-card border border-border rounded-md md:rounded-lg p-2 sm:p-3 md:p-4 hover:border-foreground transition-colors">
                   <div className="w-full aspect-square bg-muted rounded-lg mb-3">
                     {track.album?.images?.[0]?.url && (
                       <img 
@@ -78,9 +78,9 @@ const Discover = () => {
                       />
                     )}
                   </div>
-                  <div className="text-sm">
-                    <div className="font-medium text-foreground truncate">{track.name}</div>
-                    <div className="text-muted-foreground truncate">
+                  <div className="min-w-0">
+                    <div className="font-medium text-foreground truncate text-sm sm:text-base">{track.name}</div>
+                    <div className="text-muted-foreground truncate text-xs sm:text-sm">
                       {track.artists?.map((a: any) => a.name).join(", ")}
                     </div>
                   </div>
@@ -95,10 +95,10 @@ const Discover = () => {
       {artists.length > 0 && (
         <section>
           <h2 className="text-lg font-medium text-foreground mb-4">popular artists</h2>
-          <div className="grid grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
             {artists.map((artist: any) => (
               <Link key={artist.id} to={`/artist/${artist.id}`}>
-                <div className="bg-card border border-border rounded-lg p-4 hover:border-foreground transition-colors">
+                <div className="bg-card border border-border rounded-md md:rounded-lg p-2 sm:p-3 md:p-4 hover:border-foreground transition-colors">
                   <div className="w-full aspect-square bg-muted rounded-full mb-3 overflow-hidden">
                     {artist.images?.[0]?.url && (
                       <img 
@@ -108,8 +108,8 @@ const Discover = () => {
                       />
                     )}
                   </div>
-                  <div className="text-sm">
-                    <div className="font-medium text-foreground truncate text-center">{artist.name}</div>
+                  <div className="min-w-0">
+                    <div className="font-medium text-foreground truncate text-center text-sm sm:text-base">{artist.name}</div>
                   </div>
                 </div>
               </Link>

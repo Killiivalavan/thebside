@@ -1,11 +1,11 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReviewCard } from "@/components/ReviewCard";
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/context/AuthContext";
-import { useUserProfile, useUserReviews, useUserLists, useUserListeningHistory } from "@/hooks/useProfile";
+import { useUserProfile, useUserReviews, useUserLists } from "@/hooks/useProfile";
 import { useMyLists, useCreateList, useUpdateList, useDeleteList } from "@/hooks/useLists";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -13,10 +13,16 @@ import { useState, useMemo } from "react";
 import { useItemsMetadata } from "@/hooks/useItemsMetadata";
 import CreateListDialog from "@/components/CreateListDialog";
 import { Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 const Profile = () => {
   const { username } = useParams();
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
   const { data: profileData, isLoading: profileLoading, error: profileError } = useUserProfile(username);
   const { data: reviews, isLoading: reviewsLoading } = useUserReviews(profileData?.id || '');
@@ -31,10 +37,74 @@ const Profile = () => {
   // Local state for create list dialog
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const { toast } = useToast();
-  const { data: listeningHistory, isLoading: historyLoading } = useUserListeningHistory(profileData?.id || '');
+  // Listened: derive from user's reviews (deduplicated by item_id + item_type)
+  const listenedItems = useMemo(() => {
+    const seen = new Set<string>();
+    const items: { item_id: string; item_type: string }[] = [];
+    for (const r of (reviews || []) as any[]) {
+      const key = `${r.item_type}:${r.item_id}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        items.push({ item_id: r.item_id, item_type: r.item_type });
+      }
+    }
+    return items;
+  }, [reviews]);
 
   // Check if this is the current user's profile using id match when data is available
   const isOwnProfile = Boolean(currentUser && profileData && currentUser.id === profileData.id);
+
+  // Edit Profile dialog state
+  const [editOpen, setEditOpen] = useState(false);
+  const [newUsername, setNewUsername] = useState<string>("");
+  const [newBio, setNewBio] = useState<string>("");
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  const openEdit = () => {
+    setNewUsername(profileData?.username || "");
+    setNewBio(profileData?.bio || "");
+    setEditOpen(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profileData || !currentUser) return;
+    const trimmedUsername = (newUsername || "").trim();
+    if (!trimmedUsername) {
+      toast({ title: 'Username required', description: 'Please enter a username.', variant: 'destructive' });
+      return;
+    }
+    if (trimmedUsername.length < 3) {
+      toast({ title: 'Username too short', description: 'Use at least 3 characters.', variant: 'destructive' });
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ username: trimmedUsername, bio: newBio || null })
+        .eq('id', currentUser.id);
+      if (error) throw error;
+
+      // Invalidate caches
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['user-profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['user-profile', profileData.username] }),
+        queryClient.invalidateQueries({ queryKey: ['user-profile', trimmedUsername] }),
+        queryClient.invalidateQueries({ queryKey: ['current-user-profile'] }),
+      ]);
+
+      setEditOpen(false);
+      toast({ title: 'Profile updated' });
+
+      if (trimmedUsername !== profileData.username) {
+        navigate(`/profile/${encodeURIComponent(trimmedUsername)}`);
+      }
+    } catch (e: any) {
+      toast({ title: 'Update failed', description: e?.message || 'Could not update profile', variant: 'destructive' });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   // Privacy filter state for Activity tab
   const [privacyFilter, setPrivacyFilter] = useState<'all' | 'public' | 'private'>('all');
@@ -64,6 +134,7 @@ const Profile = () => {
   }, [reviews]);
 
   const { data: metadataMap } = useItemsMetadata(itemsForMetadata);
+  const { data: listenedMetadataMap } = useItemsMetadata(listenedItems);
 
   if (profileLoading) {
     return (
@@ -88,7 +159,7 @@ const Profile = () => {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-GB', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
@@ -103,7 +174,7 @@ const Profile = () => {
       </div>
 
       {/* Profile Header */}
-      <div className="flex items-center space-x-6">
+      <div className="flex items-start space-x-6">
         <div className="w-32 h-32">
           <Avatar 
             src={profileData.avatar_url} 
@@ -112,16 +183,50 @@ const Profile = () => {
             className="w-32 h-32 border-2 border-border"
           />
         </div>
-        <div className="space-y-2">
-          <h2 className="text-3xl font-bold text-foreground">{profileData.username}</h2>
+        <div className="space-y-2 min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-4 w-full">
+            <h2 className="text-3xl font-bold text-foreground truncate md:whitespace-normal md:overflow-visible">
+              {profileData.username}
+            </h2>
+            {isOwnProfile && (
+              <Button variant="secondary" size="sm" onClick={openEdit}>
+                Edit profile
+              </Button>
+            )}
+          </div>
           <p className="text-muted-foreground">
             joined on {formatDate(profileData.created_at)}
           </p>
           {profileData.bio && (
-            <p className="text-muted-foreground max-w-md">{profileData.bio}</p>
+            <p className="text-muted-foreground max-w-md truncate md:whitespace-normal md:overflow-visible">{profileData.bio}</p>
           )}
         </div>
       </div>
+
+      {/* Edit Profile Dialog */}
+      {isOwnProfile && (
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit profile</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground" htmlFor="username">Username</label>
+                <Input id="username" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="yourname" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-muted-foreground" htmlFor="bio">Bio</label>
+                <Textarea id="bio" value={newBio} onChange={(e) => setNewBio(e.target.value)} placeholder="Tell people a bit about you" rows={4} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setEditOpen(false)} disabled={savingProfile}>Cancel</Button>
+              <Button onClick={handleSaveProfile} disabled={savingProfile}>{savingProfile ? 'Saving...' : 'Save changes'}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="activity" className="space-y-6">
@@ -237,27 +342,27 @@ const Profile = () => {
         </TabsContent>
 
         <TabsContent value="listened" className="space-y-6">
-          {historyLoading ? (
-            <div className="text-center text-muted-foreground">Loading listening history...</div>
-          ) : listeningHistory && listeningHistory.length > 0 ? (
-            <div className="space-y-4">
-              {listeningHistory.map((item: any) => (
-                <div key={item.id} className="flex space-x-4 p-3 border border-border rounded-lg">
-                  <div className="w-12 h-12 bg-muted border border-border rounded-lg flex-shrink-0"></div>
-                  <div className="flex-1 space-y-1">
-                    <div className="text-sm text-muted-foreground capitalize">{item.item_type}</div>
-                    <h3 className="font-medium text-foreground">Item ID: {item.item_id}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Listened on {new Date(item.listened_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
+          {(listenedItems?.length || 0) > 0 ? (
+            <div className="grid grid-cols-1 gap-3">
+              {listenedItems.map((it: any) => {
+                const key = `${it.item_type}:${it.item_id}`;
+                const meta = listenedMetadataMap?.get(key);
+                const href = it.item_type === 'album' ? `/album/${it.item_id}` : it.item_type === 'artist' ? `/artist/${it.item_id}` : `/track/${it.item_id}`;
+                return (
+                  <Link key={key} to={href} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:border-primary/50 transition-colors">
+                    <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden">
+                      {meta?.image_url && <img src={meta.image_url} alt={meta?.name || it.item_type} className="w-full h-full object-cover" />}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xs text-muted-foreground capitalize">{it.item_type}</div>
+                      <div className="text-foreground truncate">{meta?.name || it.item_id}</div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           ) : (
-            <div className="text-center text-muted-foreground py-8">
-              No listening history yet. Start listening to music to build your history!
-            </div>
+            <div className="text-center text-muted-foreground py-8">Nothing here yet</div>
           )}
         </TabsContent>
       </Tabs>

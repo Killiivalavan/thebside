@@ -1,5 +1,7 @@
-import { Star, User, Heart } from "lucide-react";
+import { Star, User, Heart, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 interface ReviewCardProps {
   username: string;
@@ -11,9 +13,15 @@ interface ReviewCardProps {
   likeCount?: number;
   onToggleLike?: () => void;
   likeBusy?: boolean;
+  // Inline actions
+  onReplyClick?: () => void;
+  isReplying?: boolean;
+  canDelete?: boolean;
+  onDelete?: () => void;
+  deleting?: boolean;
 }
 
-export const ReviewCard = ({ username, rating, review, userAvatar, is_relisten, isLiked, likeCount, onToggleLike, likeBusy }: ReviewCardProps) => {
+export const ReviewCard = ({ username, rating, review, userAvatar, is_relisten, isLiked, likeCount, onToggleLike, likeBusy, onReplyClick, isReplying, canDelete, onDelete, deleting }: ReviewCardProps) => {
   return (
     <div className="border-b border-border pb-4 mb-4 last:border-b-0">
       <div className="flex items-start space-x-3">
@@ -26,7 +34,7 @@ export const ReviewCard = ({ username, rating, review, userAvatar, is_relisten, 
         </div>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-2 mb-2">
+          <div className="flex items-center gap-2 mb-2">
             <span className="font-medium text-foreground">{username}</span>
             {is_relisten && <Badge variant="outline">Relisten</Badge>}
             {typeof rating === 'number' && rating > 0 && (
@@ -43,24 +51,51 @@ export const ReviewCard = ({ username, rating, review, userAvatar, is_relisten, 
                 ))}
               </div>
             )}
+
+            {canDelete && onDelete && (
+              <div className="ml-auto">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={onDelete} className="text-red-600">
+                      {deleting ? 'Deleting…' : 'Delete'}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
           </div>
           
           <p className="text-sm text-foreground leading-relaxed">{review}</p>
-          
-          {onToggleLike && (
-            <button
-              type="button"
-              aria-pressed={Boolean(isLiked)}
-              disabled={likeBusy}
-              onClick={onToggleLike}
-              className={`mt-2 inline-flex items-center gap-1 text-xs transition-colors ${
-                isLiked ? "text-primary" : "text-muted-foreground hover:text-foreground"
-              } ${likeBusy ? "opacity-70 cursor-not-allowed" : ""}`}
-            >
-              <Heart className={`w-3.5 h-3.5 ${isLiked ? "fill-primary" : ""}`} />
-              <span>{likeCount ?? 0}</span>
-            </button>
-          )}
+
+          <div className="mt-2 flex items-center gap-2">
+            {onToggleLike && (
+              <button
+                type="button"
+                aria-pressed={Boolean(isLiked)}
+                disabled={likeBusy}
+                onClick={onToggleLike}
+                className={`inline-flex items-center gap-1 text-xs transition-colors ${
+                  isLiked ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                } ${likeBusy ? "opacity-70 cursor-not-allowed" : ""}`}
+              >
+                <Heart className={`w-3.5 h-3.5 ${isLiked ? "fill-primary" : ""}`} />
+                <span>{likeCount ?? 0}</span>
+              </button>
+            )}
+
+            {onReplyClick && (
+              <Button variant="ghost" size="sm" onClick={onReplyClick} className="h-7 px-2 text-xs">
+                {isReplying ? 'Cancel' : 'Reply'}
+              </Button>
+            )}
+
+            {/* overflow spacer to keep actions aligned; menu moved to header */}
+          </div>
         </div>
       </div>
     </div>

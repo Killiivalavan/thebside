@@ -4,13 +4,16 @@ import { Play } from "lucide-react";
 interface TrackItemProps {
   id: string;
   title: string;
-  artist: string;
+  // legacy single-artist props (backward compat):
+  artist?: string;
   artistId?: string;
+  // new multi-artist prop:
+  artists?: { id: string; name: string }[];
   duration: string;
   albumId?: string;
 }
 
-export const TrackItem = ({ id, title, artist, artistId, duration, albumId }: TrackItemProps) => {
+export const TrackItem = ({ id, title, artist, artistId, artists, duration, albumId }: TrackItemProps) => {
   return (
     <div className="flex items-center justify-between p-3 bg-card border border-border rounded-lg hover:bg-accent transition-colors group">
       <div className="flex items-center space-x-3 flex-1">
@@ -25,18 +28,38 @@ export const TrackItem = ({ id, title, artist, artistId, duration, albumId }: Tr
           >
             {title}
           </Link>
-          {artistId ? (
+          {Array.isArray(artists) && artists.length > 0 ? (
+            <div className="text-sm text-muted-foreground truncate">
+              {artists.map((a, idx) => (
+                <span key={a.id || `${a.name}-${idx}`}>
+                  {idx > 0 && <span>, </span>}
+                  {a.id ? (
+                    <Link
+                      to={`/artist/${a.id}`}
+                      aria-label={`View artist ${a.name}`}
+                      className="hover:text-foreground transition-colors"
+                    >
+                      {a.name}
+                    </Link>
+                  ) : (
+                    <span>{a.name}</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          ) : artistId ? (
             <Link 
               to={`/artist/${artistId}`}
+              aria-label={`View artist ${artist || 'Artist'}`}
               className="text-sm text-muted-foreground hover:text-foreground transition-colors block truncate"
             >
               {artist}
             </Link>
-          ) : (
+          ) : artist ? (
             <span className="text-sm text-muted-foreground block truncate">
               {artist}
             </span>
-          )}
+          ) : null}
         </div>
       </div>
       

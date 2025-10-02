@@ -17,11 +17,11 @@ export const AlbumCard = ({ id, title, artist, artistId, imageUrl, size = "md" }
   };
 
   return (
-    <div className="group">
+    <div className="group min-w-0">
       <Link to={`/album/${id}`} className="block">
-        <div className={`${sizeClasses[size]} bg-muted border-2 border-border rounded-lg mb-2 overflow-hidden transition-all hover:border-primary/50`}>
+        <div className={`${sizeClasses[size]} bg-muted border-2 border-border rounded-lg mb-2 overflow-hidden transition-all hover:border-primary/50 mx-auto`}>
           {imageUrl ? (
-            <img src={imageUrl} alt={`${title} by ${artist}`} className="w-full h-full object-cover" />
+            <img src={imageUrl} alt={`${title} by ${artist}`} className="w-full h-full object-cover object-center" />
           ) : (
             <div className="w-full h-full bg-muted flex items-center justify-center">
               <span className="text-muted-foreground text-xs">No Cover</span>
@@ -31,7 +31,7 @@ export const AlbumCard = ({ id, title, artist, artistId, imageUrl, size = "md" }
       </Link>
       
       {size !== "sm" && (
-        <div className="text-sm">
+        <div className="text-sm min-w-0 text-center">
           <Link 
             to={`/album/${id}`} 
             className="font-medium text-foreground hover:text-primary transition-colors block truncate"
