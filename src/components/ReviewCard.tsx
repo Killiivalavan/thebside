@@ -19,23 +19,26 @@ interface ReviewCardProps {
   canDelete?: boolean;
   onDelete?: () => void;
   deleting?: boolean;
+  hideUserMeta?: boolean;
 }
 
-export const ReviewCard = ({ username, rating, review, userAvatar, is_relisten, isLiked, likeCount, onToggleLike, likeBusy, onReplyClick, isReplying, canDelete, onDelete, deleting }: ReviewCardProps) => {
+export const ReviewCard = ({ username, rating, review, userAvatar, is_relisten, isLiked, likeCount, onToggleLike, likeBusy, onReplyClick, isReplying, canDelete, onDelete, deleting, hideUserMeta }: ReviewCardProps) => {
   return (
     <div className="border-b border-border pb-4 mb-4 last:border-b-0">
-      <div className="flex items-start space-x-3">
-        <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
-          {userAvatar ? (
-            <img src={userAvatar} alt={username} className="w-full h-full rounded-full object-cover" />
-          ) : (
-            <User className="w-5 h-5 text-muted-foreground" />
-          )}
-        </div>
-        
+      <div className={`flex items-start ${hideUserMeta ? '' : 'space-x-3'}`}>
+        {!hideUserMeta && (
+          <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
+            {userAvatar ? (
+              <img src={userAvatar} alt={username} className="w-full h-full rounded-full object-cover" />
+            ) : (
+              <User className="w-5 h-5 text-muted-foreground" />
+            )}
+          </div>
+        )}
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <span className="font-medium text-foreground">{username}</span>
+            {!hideUserMeta && <span className="font-medium text-foreground">{username}</span>}
             {is_relisten && <Badge variant="outline">Relisten</Badge>}
             {typeof rating === 'number' && rating > 0 && (
               <div className="flex space-x-1">
@@ -70,7 +73,9 @@ export const ReviewCard = ({ username, rating, review, userAvatar, is_relisten, 
             )}
           </div>
           
-          <p className="text-sm text-foreground leading-relaxed">{review}</p>
+          {review?.trim() ? (
+            <p className="text-sm text-foreground leading-relaxed">{review}</p>
+          ) : null}
 
           <div className="mt-2 flex items-center gap-2">
             {onToggleLike && (

@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar as AvatarComponent } from "@/components/Avatar";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useCurrentUserProfile } from "@/hooks/useProfile";
 
 export const Layout = () => {
@@ -18,6 +18,8 @@ export const Layout = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const debounceMs = 400;
+  const isAutoClearing = useRef(false);
 
   const handleSignOut = async () => {
     try {
@@ -40,6 +42,57 @@ export const Layout = () => {
     }
   };
 
+  // Clear search input when navigating away from /search
+  useEffect(() => {
+    if (!location.pathname.startsWith('/search') && searchQuery.trim().length > 0) {
+      isAutoClearing.current = true;
+      setSearchQuery('');
+      // Reset the flag after state update completes
+      setTimeout(() => {
+        isAutoClearing.current = false;
+      }, 0);
+    }
+  }, [location.pathname]);
+
+  // Debounced live search navigation
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+
+    // Skip navigation if we're in the middle of auto-clearing
+    if (isAutoClearing.current) {
+      return;
+    }
+    
+    // If there is no query: only normalize when already on /search
+    if (trimmed.length === 0) {
+      if (location.pathname.startsWith('/search')) {
+        const target = '/search';
+        const current = `${location.pathname}${location.search}`;
+        if (current !== target) {
+          navigate(target, { replace: true });
+        }
+      }
+      return;
+    }
+
+    // If user is NOT on /search and starts typing, navigate immediately to /search
+    if (!location.pathname.startsWith('/search')) {
+      navigate(`/search?q=${encodeURIComponent(trimmed)}`);
+      return;
+    }
+
+    // User is on /search with non-empty query: debounce URL updates
+    const target = `/search?q=${encodeURIComponent(trimmed)}`;
+    const timer = setTimeout(() => {
+      const current = `${location.pathname}${location.search}`;
+      if (current !== target) {
+        navigate(target, { replace: true });
+      }
+    }, debounceMs);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, location.pathname, location.search]);
+
   // Prefer canonical DB username if available
   const { data: currentProfile } = useCurrentUserProfile();
   const username = currentProfile?.username || user?.user_metadata?.username || user?.email?.split('@')[0] || 'user';
@@ -53,10 +106,14 @@ export const Layout = () => {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link to="/discover" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">B</span>
+              <div className="w-8 h-8 flex items-center justify-center">
+                <img 
+                  src="/logo.png" 
+                  alt="the B-side logo" 
+                  className="w-full h-full object-contain"
+                />
               </div>
-              <span className="text-foreground font-semibold">the B-side</span>
+              <span className="text-foreground font-semibold hidden sm:inline">the B-side</span>
             </Link>
 
             {/* Search Bar */}
@@ -78,11 +135,11 @@ export const Layout = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="rounded-full">
                   {avatarUrl ? (
-                    <AvatarComponent src={avatarUrl} alt={username} className="w-6 h-6 mr-2" />
+                    <AvatarComponent src={avatarUrl} alt={username} className="w-6 h-6 mr-0 sm:mr-2" />
                   ) : (
-                    <User className="w-4 h-4 mr-2" />
+                    <User className="w-4 h-4 mr-0 sm:mr-2" />
                   )}
-                  {username}
+                  <span className="hidden sm:inline">{username}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

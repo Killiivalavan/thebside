@@ -75,16 +75,16 @@ const ListPage = () => {
         ) : itemsError ? (
           <div className="text-center text-red-500">Failed to load items</div>
         ) : (itemsData?.items?.length ?? 0) > 0 ? (
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {itemsData!.items.map((item: any) => {
               const href = item.item_type === 'album' ? `/album/${item.item_id}` : item.item_type === 'artist' ? `/artist/${item.item_id}` : `/track/${item.item_id}`;
               const meta = metadataMap?.get(`${item.item_type}:${item.item_id}`);
               return (
-                <Link key={item.id} to={href} className="flex items-center gap-3 p-3 border border-border rounded-lg hover:border-primary/50 transition-colors">
-                  <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden">
-                    {meta?.image_url && <img src={meta.image_url} alt={meta?.name || item.item_type} className="w-full h-full object-cover" />}
+                <Link key={item.id} to={href} className="group border border-border rounded-lg hover:border-primary/50 transition-colors flex items-center gap-3 p-3 md:block md:p-2 md:pb-3">
+                  <div className="w-12 h-12 md:w-full md:h-40 bg-muted rounded-lg overflow-hidden md:mb-2">
+                    {meta?.image_url && <img src={meta.image_url} alt={meta?.name || item.item_type} className="w-full h-full object-contain" />}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0 md:text-center">
                     <div className="text-xs text-muted-foreground capitalize">{item.item_type}</div>
                     <div className="text-foreground truncate">{meta?.name || item.item_id}</div>
                   </div>

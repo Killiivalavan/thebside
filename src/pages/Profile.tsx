@@ -168,11 +168,6 @@ const Profile = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      {/* Page Title */}
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold text-foreground">profile/activity page</h1>
-      </div>
-
       {/* Profile Header */}
       <div className="flex items-start space-x-6">
         <div className="w-32 h-32">
@@ -189,7 +184,7 @@ const Profile = () => {
               {profileData.username}
             </h2>
             {isOwnProfile && (
-              <Button variant="secondary" size="sm" onClick={openEdit}>
+              <Button variant="secondary" size="sm" onClick={openEdit} className="hover:bg-accent hover:text-accent-foreground transition-colors">
                 Edit profile
               </Button>
             )}
@@ -241,13 +236,28 @@ const Profile = () => {
           {isOwnProfile && (
             <div className="flex justify-end">
               <div className="flex space-x-2 bg-card border border-border rounded-lg p-1">
-                <Button size="sm" variant={privacyFilter === 'all' ? 'secondary' : 'ghost'} className="text-xs" onClick={() => setPrivacyFilter('all')}>
+                <Button 
+                  size="sm" 
+                  variant={privacyFilter === 'all' ? 'secondary' : 'ghost'} 
+                  className={`text-xs ${privacyFilter === 'all' ? 'bg-accent text-accent-foreground hover:bg-accent/90' : ''}`} 
+                  onClick={() => setPrivacyFilter('all')}
+                >
                   ALL
                 </Button>
-                <Button size="sm" variant={privacyFilter === 'public' ? 'secondary' : 'ghost'} className="text-xs" onClick={() => setPrivacyFilter('public')}>
+                <Button 
+                  size="sm" 
+                  variant={privacyFilter === 'public' ? 'secondary' : 'ghost'} 
+                  className={`text-xs ${privacyFilter === 'public' ? 'bg-accent text-accent-foreground hover:bg-accent/90' : ''}`} 
+                  onClick={() => setPrivacyFilter('public')}
+                >
                   Public
                 </Button>
-                <Button size="sm" variant={privacyFilter === 'private' ? 'secondary' : 'ghost'} className="text-xs" onClick={() => setPrivacyFilter('private')}>
+                <Button 
+                  size="sm" 
+                  variant={privacyFilter === 'private' ? 'secondary' : 'ghost'} 
+                  className={`text-xs ${privacyFilter === 'private' ? 'bg-accent text-accent-foreground hover:bg-accent/90' : ''}`} 
+                  onClick={() => setPrivacyFilter('private')}
+                >
                   Private
                 </Button>
               </div>
@@ -277,7 +287,8 @@ const Profile = () => {
                       <ReviewCard
                         username={profileData.username}
                         rating={review.rating}
-                        review={review.review_text || `Rated this ${review.item_type}`}
+                        review={(review.review_text || '').trim()}
+                        hideUserMeta
                       />
                     </div>
                   </Link>
