@@ -13,6 +13,7 @@ import Album from "./pages/Album";
 import Artist from "./pages/Artist";
 import Track from "./pages/Track";
 import Profile from "./pages/Profile";
+import ListPage from "./pages/List";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,9 @@ const App = () => (
             </Route>
             <Route path="/profile/:username" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route index element={<Profile />} />
+            </Route>
+            <Route path="/list/:id" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              <Route index element={<ListPage />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

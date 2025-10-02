@@ -12,12 +12,22 @@ import { Star } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useMyLists } from "@/hooks/useLists";
+import { useAddListItem } from "@/hooks/useListItems";
 
 const Track = () => {
   const { id } = useParams<{ id: string }>();
   const { data: trackData, isLoading, error, refetch } = useSpotifyTrack(id!);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { data: myListsData } = useMyLists(1, 50);
+  const addItemMutation = useAddListItem();
 
   const [reviewText, setReviewText] = useState('');
   const [rating, setRating] = useState(0);
@@ -120,6 +130,36 @@ const Track = () => {
                 <div>{trackData.album?.release_date?.split('-')[0]}</div>
                 <div>{formatDuration(trackData.duration_ms)}</div>
               </div>
+              {user && (
+                <div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="secondary" size="sm">Add to list</Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      {myListsData?.lists?.length ? (
+                        myListsData.lists.map((list: any) => (
+                          <DropdownMenuItem
+                            key={list.id}
+                            onClick={async () => {
+                              try {
+                                await addItemMutation.mutateAsync({ list_id: list.id, item_id: id!, item_type: 'track' });
+                                toast({ title: 'Added to list', description: `Added to ${list.name}` });
+                              } catch (e: any) {
+                                toast({ title: 'Failed to add', description: e?.message || 'Unable to add to list', variant: 'destructive' });
+                              }
+                            }}
+                          >
+                            {list.name}
+                          </DropdownMenuItem>
+                        ))
+                      ) : (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">No lists found</div>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
             </div>
           </div>
         </div>

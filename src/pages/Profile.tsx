@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,6 +6,10 @@ import { ReviewCard } from "@/components/ReviewCard";
 import { Avatar } from "@/components/Avatar";
 import { useAuth } from "@/context/AuthContext";
 import { useUserProfile, useUserReviews, useUserLists, useUserListeningHistory } from "@/hooks/useProfile";
+import { useMyLists, useCreateList, useUpdateList, useDeleteList } from "@/hooks/useLists";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 const Profile = () => {
   const { username } = useParams();
@@ -13,7 +17,18 @@ const Profile = () => {
   
   const { data: profileData, isLoading: profileLoading, error: profileError } = useUserProfile(username);
   const { data: reviews, isLoading: reviewsLoading } = useUserReviews(profileData?.id || '');
-  const { data: lists, isLoading: listsLoading } = useUserLists(profileData?.id || '');
+  const { data: listsData, isLoading: listsLoadingFn } = useMyLists(1, 20);
+  const { data: lists, isLoading: listsLoadingDb } = useUserLists(profileData?.id || '');
+
+  // List CRUD hooks for own profile
+  const createList = useCreateList();
+  const updateList = useUpdateList();
+  const deleteList = useDeleteList();
+
+  // Local state for creating a new list
+  const [newListName, setNewListName] = useState('');
+  const [newListDescription, setNewListDescription] = useState('');
+  const { toast } = useToast();
   const { data: listeningHistory, isLoading: historyLoading } = useUserListeningHistory(profileData?.id || '');
 
   // Check if this is the current user's profile using id match when data is available
@@ -132,11 +147,55 @@ const Profile = () => {
         </TabsContent>
 
         <TabsContent value="list" className="space-y-6">
-          {listsLoading ? (
+          {(isOwnProfile ? listsLoadingFn : listsLoadingDb) ? (
             <div className="text-center text-muted-foreground">Loading lists...</div>
-          ) : lists && lists.length > 0 ? (
+          ) : (
+            (() => {
+              const renderLists = () => {
+                if (isOwnProfile) {
+                  const myLists = listsData?.lists || [];
+                  return myLists;
+                }
+                return lists || [];
+              };
+              const listsToRender = renderLists();
+              return (
             <div className="space-y-6">
-              {lists.map((list: any) => (
+              {isOwnProfile && (
+                <div className="border border-border rounded-lg p-4">
+                  <h3 className="font-medium text-foreground mb-3">Create a list</h3>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      placeholder="List name"
+                      value={newListName}
+                      onChange={(e) => setNewListName(e.target.value)}
+                      className="bg-transparent"
+                    />
+                    <Input
+                      placeholder="Description (optional)"
+                      value={newListDescription}
+                      onChange={(e) => setNewListDescription(e.target.value)}
+                      className="bg-transparent"
+                    />
+                    <Button
+                      disabled={createList.isPending || !newListName.trim()}
+                      onClick={async () => {
+                        try {
+                          await createList.mutateAsync({ name: newListName.trim(), description: newListDescription.trim() || undefined });
+                          setNewListName('');
+                          setNewListDescription('');
+                          toast({ title: 'List created' });
+                        } catch (e: any) {
+                          toast({ title: 'Failed to create list', description: e?.message || 'Please try again', variant: 'destructive' });
+                        }
+                      }}
+                    >
+                      {createList.isPending ? 'Creating...' : 'Create'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {listsToRender.map((list: any) => (
                 <div key={list.id} className="border border-border rounded-lg p-4">
                   <div className="flex justify-between items-start mb-4">
                     <div>
@@ -145,11 +204,49 @@ const Profile = () => {
                         <p className="text-sm text-muted-foreground mt-1">{list.description}</p>
                       )}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {list.list_items?.length || 0} items
+                    <div className="flex items-center gap-3">
+                      <div className="text-xs text-muted-foreground">
+                        {Array.isArray(list.list_items) ? (list.list_items?.length || 0) : 0} items
+                      </div>
+                      {isOwnProfile && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={async () => {
+                              const nextName = window.prompt('Rename list', list.name)?.trim();
+                              if (!nextName) return;
+                              try {
+                                await updateList.mutateAsync({ list_id: list.id, name: nextName });
+                                toast({ title: 'List renamed' });
+                              } catch (e: any) {
+                                toast({ title: 'Failed to rename list', description: e?.message || 'Please try again', variant: 'destructive' });
+                              }
+                            }}
+                          >
+                            Rename
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={async () => {
+                              const ok = window.confirm('Delete this list?');
+                              if (!ok) return;
+                              try {
+                                await deleteList.mutateAsync({ list_id: list.id });
+                                toast({ title: 'List deleted' });
+                              } catch (e: any) {
+                                toast({ title: 'Failed to delete list', description: e?.message || 'Please try again', variant: 'destructive' });
+                              }
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  {list.list_items && list.list_items.length > 0 ? (
+                  {Array.isArray(list.list_items) && list.list_items.length > 0 ? (
                     <div className="space-y-2">
                       {list.list_items.slice(0, 3).map((item: any) => (
                         <div key={item.id} className="flex space-x-3 text-sm">
@@ -160,22 +257,26 @@ const Profile = () => {
                           </div>
                         </div>
                       ))}
-                      {list.list_items.length > 3 && (
-                        <div className="text-xs text-muted-foreground">
-                          +{list.list_items.length - 3} more items
-                        </div>
-                      )}
+                      <div className="flex items-center justify-between">
+                        {list.list_items.length > 3 && (
+                          <div className="text-xs text-muted-foreground">
+                            +{list.list_items.length - 3} more items
+                          </div>
+                        )}
+                        <Link to={`/list/${list.id}`} className="text-xs text-primary">Open list</Link>
+                      </div>
                     </div>
                   ) : (
-                    <div className="text-sm text-muted-foreground">Empty list</div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-muted-foreground">No music added</div>
+                      <Link to={`/list/${list.id}`} className="text-xs text-primary">Open list</Link>
+                    </div>
                   )}
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              No lists created yet. Create your first list to organize your favorite music!
-            </div>
+              );
+            })()
           )}
         </TabsContent>
 

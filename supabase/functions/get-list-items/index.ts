@@ -1,0 +1,70 @@
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 405,
+    });
+  }
+
+  try {
+    const { list_id, page = 1, limit = 20 } = await req.json();
+    if (!list_id || typeof list_id !== 'string') {
+      return new Response(JSON.stringify({ error: 'list_id is required' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
+    }
+
+    const parsedPage = Math.max(1, Number(page) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
+    const from = (parsedPage - 1) * parsedLimit;
+    const to = from + parsedLimit - 1;
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+
+    // Public read; ownership enforced by RLS for mutations. We still fetch with caller JWT.
+    const { data, error, count } = await supabase
+      .from('list_items')
+      .select('*', { count: 'exact' })
+      .eq('list_id', list_id)
+      .order('added_at', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
+    }
+
+    return new Response(JSON.stringify({ items: data ?? [], page: parsedPage, limit: parsedLimit, total: count ?? 0 }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unexpected error';
+    return new Response(JSON.stringify({ error: message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    });
+  }
+});
+
+
