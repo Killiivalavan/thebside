@@ -44,7 +44,8 @@ serve(async (req) => {
 
     const { data, error, count } = await supabase
       .from('lists')
-      .select('*', { count: 'exact' })
+      // Select lists and an aggregate count of list_items for each list
+      .select('*, list_items(count)', { count: 'exact' })
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .range(from, to);
@@ -55,8 +56,16 @@ serve(async (req) => {
         status: 400,
       });
     }
+    // Map embedded aggregate into a flat items_count and strip the embedded field
+    const listsWithCount = (data ?? []).map((l: any) => {
+      const items_count = Array.isArray(l.list_items) && l.list_items.length > 0 && typeof l.list_items[0]?.count === 'number'
+        ? l.list_items[0].count
+        : 0;
+      const { list_items, ...rest } = l;
+      return { ...rest, items_count };
+    });
 
-    return new Response(JSON.stringify({ lists: data ?? [], page: parsedPage, limit: parsedLimit, total: count ?? 0 }), {
+    return new Response(JSON.stringify({ lists: listsWithCount, page: parsedPage, limit: parsedLimit, total: count ?? 0 }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

@@ -34,19 +34,20 @@ serve(async (req) => {
       throw new Error('Missing required fields: item_id and item_type are required.');
     }
 
-    // For top-level reviews, require a positive rating. For replies (when parent_id is provided), allow rating 0.
+    // Require at least one of: rating (1..5) or non-empty review_text
     const isReply = Boolean(parent_id);
-    const isValidTopLevelRating = typeof rating === 'number' && rating >= 1 && rating <= 5;
-    if (!isReply && !isValidTopLevelRating) {
-      throw new Error('Rating must be provided and greater than 0 for top-level reviews.');
+    const hasText = typeof review_text === 'string' && review_text.trim().length > 0;
+    const hasRating = typeof rating === 'number' && rating >= 1 && rating <= 5;
+    if (!hasText && !hasRating) {
+      throw new Error('Please provide a rating or write a review.');
     }
 
     const reviewData = {
       user_id: user.id,
       item_id,
       item_type,
-      // For replies, persist rating as null to satisfy typical CHECK constraints (1..5)
-      rating: isReply ? null : rating,
+      // Persist rating only when valid; otherwise null
+      rating: hasRating ? rating : null,
       review_text,
       parent_id: parent_id || null,
       is_private: is_private || false,

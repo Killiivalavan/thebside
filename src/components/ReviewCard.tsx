@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface ReviewCardProps {
   username: string;
-  rating: number;
+  rating?: number | null;
   review: string;
   userAvatar?: string;
   is_relisten?: boolean;
@@ -29,18 +29,20 @@ export const ReviewCard = ({ username, rating, review, userAvatar, is_relisten, 
           <div className="flex items-center space-x-2 mb-2">
             <span className="font-medium text-foreground">{username}</span>
             {is_relisten && <Badge variant="outline">Relisten</Badge>}
-            <div className="flex space-x-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                  key={star}
-                  className={`w-4 h-4 ${
-                    star <= rating
-                      ? "fill-primary text-primary"
-                      : "text-muted-foreground"
-                  }`}
-                />
-              ))}
-            </div>
+            {typeof rating === 'number' && rating > 0 && (
+              <div className="flex space-x-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`w-4 h-4 ${
+                      star <= (rating || 0)
+                        ? "fill-primary text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
           
           <p className="text-sm text-foreground leading-relaxed">{review}</p>

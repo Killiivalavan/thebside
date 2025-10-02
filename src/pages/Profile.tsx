@@ -9,7 +9,10 @@ import { useUserProfile, useUserReviews, useUserLists, useUserListeningHistory }
 import { useMyLists, useCreateList, useUpdateList, useDeleteList } from "@/hooks/useLists";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useItemsMetadata } from "@/hooks/useItemsMetadata";
+import CreateListDialog from "@/components/CreateListDialog";
+import { Plus } from "lucide-react";
 
 const Profile = () => {
   const { username } = useParams();
@@ -25,14 +28,42 @@ const Profile = () => {
   const updateList = useUpdateList();
   const deleteList = useDeleteList();
 
-  // Local state for creating a new list
-  const [newListName, setNewListName] = useState('');
-  const [newListDescription, setNewListDescription] = useState('');
+  // Local state for create list dialog
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const { toast } = useToast();
   const { data: listeningHistory, isLoading: historyLoading } = useUserListeningHistory(profileData?.id || '');
 
   // Check if this is the current user's profile using id match when data is available
   const isOwnProfile = Boolean(currentUser && profileData && currentUser.id === profileData.id);
+
+  // Privacy filter state for Activity tab
+  const [privacyFilter, setPrivacyFilter] = useState<'all' | 'public' | 'private'>('all');
+
+  // Compute filtered reviews based on privacy setting
+  const filteredReviews = useMemo(() => {
+    if (!reviews) return [] as any[];
+    return reviews.filter((r: any) => {
+      if (privacyFilter === 'all') return true;
+      if (privacyFilter === 'public') return !r.is_private;
+      return !!r.is_private;
+    });
+  }, [reviews, privacyFilter]);
+
+  // Prepare unique item keys for metadata fetch
+  const itemsForMetadata = useMemo(() => {
+    const set = new Set<string>();
+    const items: { item_id: string; item_type: string }[] = [];
+    (reviews || []).forEach((r: any) => {
+      const key = `${r.item_type}:${r.item_id}`;
+      if (!set.has(key)) {
+        set.add(key);
+        items.push({ item_id: r.item_id, item_type: r.item_type });
+      }
+    });
+    return items;
+  }, [reviews]);
+
+  const { data: metadataMap } = useItemsMetadata(itemsForMetadata);
 
   if (profileLoading) {
     return (
@@ -105,13 +136,13 @@ const Profile = () => {
           {isOwnProfile && (
             <div className="flex justify-end">
               <div className="flex space-x-2 bg-card border border-border rounded-lg p-1">
-                <Button size="sm" variant="secondary" className="text-xs">
+                <Button size="sm" variant={privacyFilter === 'all' ? 'secondary' : 'ghost'} className="text-xs" onClick={() => setPrivacyFilter('all')}>
                   ALL
                 </Button>
-                <Button size="sm" variant="ghost" className="text-xs">
+                <Button size="sm" variant={privacyFilter === 'public' ? 'secondary' : 'ghost'} className="text-xs" onClick={() => setPrivacyFilter('public')}>
                   Public
                 </Button>
-                <Button size="sm" variant="ghost" className="text-xs">
+                <Button size="sm" variant={privacyFilter === 'private' ? 'secondary' : 'ghost'} className="text-xs" onClick={() => setPrivacyFilter('private')}>
                   Private
                 </Button>
               </div>
@@ -121,23 +152,32 @@ const Profile = () => {
           {/* Activity Feed - Reviews */}
           {reviewsLoading ? (
             <div className="text-center text-muted-foreground">Loading reviews...</div>
-          ) : reviews && reviews.length > 0 ? (
+          ) : filteredReviews && filteredReviews.length > 0 ? (
             <div className="space-y-6">
-              {reviews.map((review: any) => (
-                <div key={review.id} className="flex space-x-4">
-                  <div className="w-16 h-16 bg-muted border border-border rounded-lg flex-shrink-0"></div>
-                  <div className="flex-1">
-                    <div className="text-sm text-muted-foreground mb-1 capitalize">
-                      {review.item_type} • {new Date(review.created_at).toLocaleDateString()}
+              {filteredReviews.map((review: any) => {
+                const key = `${review.item_type}:${review.item_id}`;
+                const meta = metadataMap?.get(key);
+                const href = `/${review.item_type}/${review.item_id}`;
+                return (
+                  <Link key={review.id} to={href} className="flex space-x-4">
+                    <div className="w-16 h-16 bg-muted border border-border rounded-lg flex-shrink-0 overflow-hidden">
+                      {meta?.image_url ? (
+                        <img src={meta.image_url} alt={meta.name || review.item_type} className="w-full h-full object-cover" />
+                      ) : null}
                     </div>
-                    <ReviewCard
-                      username={profileData.username}
-                      rating={review.rating}
-                      review={review.review_text || `Rated this ${review.item_type}`}
-                    />
-                  </div>
-                </div>
-              ))}
+                    <div className="flex-1">
+                      <div className="text-sm text-muted-foreground mb-1 capitalize">
+                        {review.item_type} • {new Date(review.created_at).toLocaleDateString()}
+                      </div>
+                      <ReviewCard
+                        username={profileData.username}
+                        rating={review.rating}
+                        review={review.review_text || `Rated this ${review.item_type}`}
+                      />
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center text-muted-foreground py-8">
@@ -160,121 +200,37 @@ const Profile = () => {
               };
               const listsToRender = renderLists();
               return (
+            <>
             <div className="space-y-6">
               {isOwnProfile && (
-                <div className="border border-border rounded-lg p-4">
-                  <h3 className="font-medium text-foreground mb-3">Create a list</h3>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Input
-                      placeholder="List name"
-                      value={newListName}
-                      onChange={(e) => setNewListName(e.target.value)}
-                      className="bg-transparent"
-                    />
-                    <Input
-                      placeholder="Description (optional)"
-                      value={newListDescription}
-                      onChange={(e) => setNewListDescription(e.target.value)}
-                      className="bg-transparent"
-                    />
-                    <Button
-                      disabled={createList.isPending || !newListName.trim()}
-                      onClick={async () => {
-                        try {
-                          await createList.mutateAsync({ name: newListName.trim(), description: newListDescription.trim() || undefined });
-                          setNewListName('');
-                          setNewListDescription('');
-                          toast({ title: 'List created' });
-                        } catch (e: any) {
-                          toast({ title: 'Failed to create list', description: e?.message || 'Please try again', variant: 'destructive' });
-                        }
-                      }}
-                    >
-                      {createList.isPending ? 'Creating...' : 'Create'}
-                    </Button>
-                  </div>
+                <div className="flex justify-end">
+                  <Button variant="secondary" size="icon" className="rounded-full" aria-label="Create list" onClick={() => setCreateDialogOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
               )}
+              {(!listsToRender || listsToRender.length === 0) && (
+                <div className="text-center text-muted-foreground">No lists yet. Get started by creating your first list.</div>
+              )}
               {listsToRender.map((list: any) => (
-                <div key={list.id} className="border border-border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-4">
+                <Link key={list.id} to={`/list/${list.id}`} className="block border border-border rounded-lg p-4 hover:border-primary/50 transition-colors">
+                  <div className="flex justify-between items-start mb-2">
                     <div>
                       <h3 className="font-medium text-foreground">{list.name}</h3>
                       {list.description && (
                         <p className="text-sm text-muted-foreground mt-1">{list.description}</p>
                       )}
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-xs text-muted-foreground">
-                        {Array.isArray(list.list_items) ? (list.list_items?.length || 0) : 0} items
-                      </div>
-                      {isOwnProfile && (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={async () => {
-                              const nextName = window.prompt('Rename list', list.name)?.trim();
-                              if (!nextName) return;
-                              try {
-                                await updateList.mutateAsync({ list_id: list.id, name: nextName });
-                                toast({ title: 'List renamed' });
-                              } catch (e: any) {
-                                toast({ title: 'Failed to rename list', description: e?.message || 'Please try again', variant: 'destructive' });
-                              }
-                            }}
-                          >
-                            Rename
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={async () => {
-                              const ok = window.confirm('Delete this list?');
-                              if (!ok) return;
-                              try {
-                                await deleteList.mutateAsync({ list_id: list.id });
-                                toast({ title: 'List deleted' });
-                              } catch (e: any) {
-                                toast({ title: 'Failed to delete list', description: e?.message || 'Please try again', variant: 'destructive' });
-                              }
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      )}
+                    <div className="text-xs text-muted-foreground">
+                      {typeof list.items_count === 'number' ? list.items_count : (Array.isArray(list.list_items) ? (list.list_items?.length || 0) : 0)} items
                     </div>
                   </div>
-                  {Array.isArray(list.list_items) && list.list_items.length > 0 ? (
-                    <div className="space-y-2">
-                      {list.list_items.slice(0, 3).map((item: any) => (
-                        <div key={item.id} className="flex space-x-3 text-sm">
-                          <div className="w-8 h-8 bg-muted rounded flex-shrink-0"></div>
-                          <div>
-                            <div className="text-muted-foreground capitalize">{item.item_type}</div>
-                            <div className="font-medium">Item ID: {item.item_id}</div>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="flex items-center justify-between">
-                        {list.list_items.length > 3 && (
-                          <div className="text-xs text-muted-foreground">
-                            +{list.list_items.length - 3} more items
-                          </div>
-                        )}
-                        <Link to={`/list/${list.id}`} className="text-xs text-primary">Open list</Link>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-muted-foreground">No music added</div>
-                      <Link to={`/list/${list.id}`} className="text-xs text-primary">Open list</Link>
-                    </div>
-                  )}
-                </div>
+                  {/* Hide item previews on profile; details should be inside the list page */}
+                </Link>
               ))}
             </div>
+            <CreateListDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+            </>
               );
             })()
           )}

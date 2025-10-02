@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Star } from "lucide-react";
+import { Star, Plus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useMyLists } from "@/hooks/useLists";
 import { useAddListItem } from "@/hooks/useListItems";
+import CreateListDialog from "@/components/CreateListDialog";
 
 const Track = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +29,7 @@ const Track = () => {
   const { toast } = useToast();
   const { data: myListsData } = useMyLists(1, 50);
   const addItemMutation = useAddListItem();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const [reviewText, setReviewText] = useState('');
   const [rating, setRating] = useState(0);
@@ -36,10 +38,10 @@ const Track = () => {
   const [isPrivate, setIsPrivate] = useState(false);
 
   const handleReviewSubmit = async () => {
-    if (!user || !reviewText.trim() || rating === 0) {
+    if (!user || (!reviewText.trim() && rating === 0)) {
       toast({
         title: 'Error',
-        description: 'Please write a review and select a rating.',
+        description: 'Please provide a rating or write a review.',
         variant: 'destructive',
       });
       return;
@@ -51,7 +53,7 @@ const Track = () => {
         item_id: id,
         item_type: 'track',
         review_text: reviewText,
-        rating: rating,
+        rating: rating > 0 ? rating : null,
         is_relisten: isRelisten,
         is_private: isPrivate,
       },
@@ -133,9 +135,11 @@ const Track = () => {
               {user && (
                 <div>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="secondary" size="sm">Add to list</Button>
-                    </DropdownMenuTrigger>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="secondary" size="icon" className="rounded-full" aria-label="Add to list">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
                       {myListsData?.lists?.length ? (
                         myListsData.lists.map((list: any) => (
@@ -156,12 +160,14 @@ const Track = () => {
                       ) : (
                         <div className="px-2 py-1.5 text-sm text-muted-foreground">No lists found</div>
                       )}
+                      <DropdownMenuItem onClick={() => setCreateDialogOpen(true)}>Create new list…</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               )}
             </div>
           </div>
+          <CreateListDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} autoAddItem={{ item_id: id!, item_type: 'track' }} />
         </div>
 
         {/* Right Column - Reviews */}
@@ -172,34 +178,36 @@ const Track = () => {
 
           {user && (
             <div className="space-y-4 p-4 border rounded-lg">
+              {/* Top row: Star rating (left) and Private (right) */}
+              <div className="flex items-center justify-between">
+                <div className="flex space-x-1">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button key={star} onClick={() => setRating(prev => prev === star ? 0 : star)} className="focus:outline-none">
+                      <Star className={`w-6 h-6 transition-colors ${rating >= star ? 'fill-primary text-primary' : 'text-muted-foreground hover:text-primary'}`} />
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch id="isPrivate" checked={isPrivate} onCheckedChange={setIsPrivate} />
+                  <Label htmlFor="isPrivate">Private</Label>
+                </div>
+              </div>
+
               <Textarea 
                 placeholder="Write a review..."
                 value={reviewText}
                 onChange={(e) => setReviewText(e.target.value)}
                 className="bg-transparent"
               />
-              <div className="flex items-center justify-between pt-4 border-t">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="isRelisten" checked={isRelisten} onCheckedChange={(checked) => setIsRelisten(Boolean(checked))} />
-                    <Label htmlFor="isRelisten">Relisten</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch id="isPrivate" checked={isPrivate} onCheckedChange={setIsPrivate} />
-                    <Label htmlFor="isPrivate">Private</Label>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex space-x-1">
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <button key={star} onClick={() => setRating(star)} className="focus:outline-none">
-                      <Star className={`w-6 h-6 transition-colors ${rating >= star ? 'fill-primary text-primary' : 'text-muted-foreground hover:text-primary'}`} />
-                    </button>
-                  ))}
+
+              {/* Bottom row: Relisten (left) and Submit button (right) */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="isRelisten" checked={isRelisten} onCheckedChange={(checked) => setIsRelisten(Boolean(checked))} />
+                  <Label htmlFor="isRelisten">Relisten</Label>
                 </div>
                 <Button onClick={handleReviewSubmit} disabled={isSubmitting}>
-                  {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                  {isSubmitting ? 'Submitting...' : 'Submit'}
                 </Button>
               </div>
             </div>

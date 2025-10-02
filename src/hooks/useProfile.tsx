@@ -59,7 +59,7 @@ export const useUserReviews = (userId: string) => {
         .from('reviews')
         .select(`
           *,
-          users!inner(username, avatar_url)
+          users!reviews_user_id_fkey(username, avatar_url)
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
