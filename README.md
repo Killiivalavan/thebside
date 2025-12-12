@@ -1,73 +1,210 @@
-# Welcome to your Lovable project
+# The B-side 🎵
 
-## Project info
+**Where Hot Takes are the Hottest Tracks**
 
-**URL**: https://lovable.dev/projects/ae0d50a8-803a-48dd-ba81-abcc5a2ff9d5
+A modern music review and social platform for discovering, rating, and discussing music with friends. Built with React, TypeScript, and Supabase.
 
-## How can I edit this code?
+🌐 **Live Site**: [thebside.club](https://thebside.club)
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## ✨ Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/ae0d50a8-803a-48dd-ba81-abcc5a2ff9d5) and start prompting.
+### 🎧 Music Discovery
+- **Search & Explore**: Search for albums, tracks, artists, and playlists powered by Spotify
+- **Personalized Recommendations**: Get tailored music suggestions based on your listening habits
+- **Spotify Integration**: Seamlessly connect your Spotify account to sync your library
 
-Changes made via Lovable will be committed automatically to this repo.
+### ⭐ Rate & Review
+- **Star Ratings**: Rate albums and tracks on a 5-star scale
+- **Written Reviews**: Share your thoughts and hot takes on music
+- **Review Threading**: Reply to reviews and engage in discussions
+- **Private Reviews**: Keep reviews private or share them with the community
 
-**Use your preferred IDE**
+### 📝 Curate Lists
+- **Custom Lists**: Create ranked lists of your favorite albums and tracks
+- **Export to Spotify**: Convert your lists into Spotify playlists instantly
+- **Share & Discover**: Browse lists created by other music lovers
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 👥 Social Features
+- **Follow Friends**: Keep track of what your friends are listening to
+- **Activity Feed**: See recent reviews, lists, and ratings from people you follow
+- **User Profiles**: Showcase your music taste and listening history
+- **Community Insights**: Discover trending albums and popular reviews
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+## 🛠️ Tech Stack
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for blazing-fast development
+- **TailwindCSS** for styling
+- **Radix UI** for accessible components
+- **React Query** for data fetching and caching
+- **React Router** for navigation
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Backend
+- **Supabase** for database and authentication
+- **PostgreSQL** for data storage
+- **Row Level Security (RLS)** for data protection
+- **Supabase Edge Functions** (Deno) for serverless API
 
-# Step 3: Install the necessary dependencies.
-npm i
+### External APIs
+- **Spotify Web API** for music data and integration
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+ and npm
+- Supabase account
+- Spotify Developer account
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/thebside.git
+   cd thebside
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   
+   Create a `.env` file in the root directory:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id
+   ```
+
+4. **Set up Supabase**
+   
+   Install Supabase CLI:
+   ```bash
+   npm install -g supabase
+   ```
+   
+   Link to your Supabase project:
+   ```bash
+   supabase link --project-ref your-project-ref
+   ```
+   
+   Run migrations:
+   ```bash
+   supabase db push
+   ```
+   
+   Deploy Edge Functions:
+   ```bash
+   supabase functions deploy
+   ```
+
+5. **Configure Spotify Developer App**
+   
+   - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+   - Create a new app
+   - Add redirect URIs:
+     - `http://localhost:5173/discover` (for local development)
+     - `https://yourdomain.com/discover` (for production)
+   - Copy your Client ID to the `.env` file
+
+6. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## 📁 Project Structure
+
+```
+thebside/
+├── public/              # Static assets
+│   └── albums/         # Album cover images
+├── src/
+│   ├── components/     # React components
+│   ├── context/        # React context providers
+│   ├── hooks/          # Custom React hooks
+│   ├── lib/            # Utility libraries
+│   ├── pages/          # Page components
+│   └── types/          # TypeScript type definitions
+├── supabase/
+│   ├── functions/      # Edge Functions (Deno)
+│   └── migrations/     # Database migrations
+└── ...
 ```
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🗄️ Database Schema
 
-**Use GitHub Codespaces**
+### Core Tables
+- `users` - User profiles and authentication
+- `reviews` - Album/track reviews with ratings
+- `review_likes` - Like system for reviews
+- `lists` - User-created music lists
+- `list_items` - Items within lists
+- `follows` - User follow relationships
+- `spotify_tokens` - Spotify OAuth tokens
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Key Features
+- **Row Level Security (RLS)** on all tables
+- **Recursive CTEs** for review threading
+- **Database functions** for complex queries
+- **Triggers** for automatic timestamps
 
-## What technologies are used for this project?
+---
 
-This project is built with:
+## 🔧 Available Scripts
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+- `supabase functions deploy` - Deploy Edge Functions
+- `supabase db push` - Apply database migrations
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/ae0d50a8-803a-48dd-ba81-abcc5a2ff9d5) and click on Share -> Publish.
+## 🌐 Deployment
 
-## Can I connect a custom domain to my Lovable project?
+### Frontend (Vercel)
+1. Connect your GitHub repository to Vercel
+2. Set environment variables in Vercel dashboard
+3. Deploy automatically on push to main branch
 
-Yes, you can!
+### Backend (Supabase)
+1. Database migrations are applied via Supabase CLI
+2. Edge Functions are deployed via `supabase functions deploy`
+3. Environment variables are set in Supabase dashboard
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+---
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+## 📝 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+---
+
+## 📧 Contact
+
+For bug reports or feature requests, please contact:
+- Email: dev.killie@gmail.com
+- Website: [thebside.club](https://thebside.club)
+
+---
+
+**Built with ❤️ by music lover, for music lovers**
