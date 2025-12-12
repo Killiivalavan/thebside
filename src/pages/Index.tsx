@@ -80,15 +80,17 @@ const Index = () => {
                     return (
                       <div
                         key={i}
-                        className="w-40 h-40 rounded-lg flex-shrink-0 border border-white/5 transition-transform duration-1000 overflow-hidden"
+                        className="w-40 h-40 rounded-lg flex-shrink-0 border border-white/5 transition-transform duration-1000 overflow-hidden bg-muted"
                         style={{
                           transform: `translateY(${carouselOffsets[rowIndex][offsetIndex]}px)`,
                         }}
                       >
                         <img
-                          src={`/albums/L${num}.jpg`}
-                          alt={`Album Art ${num}`}
+                          src={`/albums/L${num}.webp`}
+                          alt=""
                           className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity"
+                          loading="lazy"
+                          decoding="async"
                         />
                       </div>
                     );
