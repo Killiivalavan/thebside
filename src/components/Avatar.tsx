@@ -4,7 +4,7 @@ import { User } from 'lucide-react';
 interface AvatarProps {
   src?: string | null;
   alt?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   className?: string;
   fallbackIcon?: boolean;
 }
@@ -13,20 +13,22 @@ const sizeClasses = {
   sm: 'w-6 h-6',
   md: 'w-8 h-8', 
   lg: 'w-12 h-12',
-  xl: 'w-16 h-16'
+  xl: 'w-16 h-16',
+  '2xl': 'w-24 h-24'
 };
 
 const iconSizes = {
   sm: 'w-4 h-4',
   md: 'w-5 h-5',
   lg: 'w-6 h-6', 
-  xl: 'w-8 h-8'
+  xl: 'w-8 h-8',
+  '2xl': 'w-12 h-12'
 };
 
 // Build a Google avatar URL with an explicit size to reduce dynamic resizing/rate-limits
-const buildGoogleAvatarUrl = (url: string, size: 'sm' | 'md' | 'lg' | 'xl'): string => {
+const buildGoogleAvatarUrl = (url: string, size: 'sm' | 'md' | 'lg' | 'xl' | '2xl'): string => {
   if (!url.includes('googleusercontent.com')) return url;
-  const pixelSize = size === 'sm' ? 64 : size === 'md' ? 96 : size === 'lg' ? 128 : 192;
+  const pixelSize = size === 'sm' ? 64 : size === 'md' ? 96 : size === 'lg' ? 128 : size === 'xl' ? 192 : 256;
   const cleanUrl = url.split('=')[0];
   return `${cleanUrl}=s${pixelSize}-c`;
 };

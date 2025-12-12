@@ -7,8 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-type ItemInput = { item_id: string; item_type: 'album' | 'track' | 'artist' };
-type ItemOutput = { item_id: string; item_type: 'album' | 'track' | 'artist'; name: string; image_url?: string; primary_artist?: string };
+type ItemInput = { item_id: string; item_type: 'album' | 'track' | 'artist' | 'playlist' };
+type ItemOutput = { item_id: string; item_type: 'album' | 'track' | 'artist' | 'playlist'; name: string; image_url?: string; primary_artist?: string };
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -36,9 +36,9 @@ serve(async (req) => {
 
     const marketParam = market || Deno.env.get('SPOTIFY_DEFAULT_MARKET') || 'US';
 
-    const byType: Record<'album' | 'track' | 'artist', string[]> = { album: [], track: [], artist: [] };
+    const byType: Record<'album' | 'track' | 'artist' | 'playlist', string[]> = { album: [], track: [], artist: [], playlist: [] };
     for (const it of items as ItemInput[]) {
-      if (it?.item_id && (it.item_type === 'album' || it.item_type === 'track' || it.item_type === 'artist')) {
+      if (it?.item_id && (it.item_type === 'album' || it.item_type === 'track' || it.item_type === 'artist' || it.item_type === 'playlist')) {
         byType[it.item_type].push(it.item_id);
       }
     }
@@ -74,6 +74,32 @@ serve(async (req) => {
       for (const ar of data?.artists || []) {
         const image = ar?.images?.[0]?.url as string | undefined;
         results.push({ item_id: ar.id, item_type: 'artist', name: ar.name, image_url: image });
+      }
+    }
+
+    // Playlists: one by one (Spotify API no batch) -- fetch in parallel
+    if (byType.playlist.length > 0) {
+      const playlistPromises = byType.playlist.map(async (id) => {
+        try {
+          const data = await fetchSpotifyJson<any>(`https://api.spotify.com/v1/playlists/${id}?fields=id,name,images,owner(display_name)`);
+          const image = data?.images?.[0]?.url as string | undefined;
+          const ownerName = data?.owner?.display_name as string | undefined;
+          return { 
+            item_id: data.id, 
+            item_type: 'playlist' as const, 
+            name: data.name, 
+            image_url: image,
+            primary_artist: ownerName ? `By ${ownerName}` : undefined 
+          };
+        } catch (e) {
+          console.error(`Failed to fetch playlist ${id}:`, e);
+          return null;
+        }
+      });
+
+      const playlistResults = await Promise.all(playlistPromises);
+      for (const res of playlistResults) {
+        if (res) results.push(res);
       }
     }
 

@@ -7,6 +7,8 @@ import { useItemsMetadata } from '@/hooks/useItemsMetadata';
 import { useMemo } from 'react';
 import { useListById } from '@/hooks/useLists';
 import { useListItems } from '@/hooks/useListItems';
+import { useCreatePlaylist } from '@/hooks/useSpotify';
+import { useToast } from '@/hooks/use-toast';
 
 const ListPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +16,8 @@ const ListPage = () => {
   const { data: itemsData, isLoading: itemsLoading, error: itemsError } = useListItems(id || '', 1, 20);
   const updateList = useUpdateList();
   const deleteList = useDeleteList();
+  const createPlaylist = useCreatePlaylist();
+  const { toast } = useToast();
 
   const itemsForMetadata = useMemo(() => {
     const list = itemsData?.items || [];
@@ -56,13 +60,36 @@ const ListPage = () => {
             <DropdownMenuItem onClick={async () => {
               const nextName = window.prompt('Rename list', list.name)?.trim();
               if (!nextName) return;
-              try { await updateList.mutateAsync({ list_id: list.id, name: nextName }); } catch {}
+              try { await updateList.mutateAsync({ list_id: list.id, name: nextName }); } catch { }
             }}>Rename</DropdownMenuItem>
             <DropdownMenuItem onClick={async () => {
               const ok = window.confirm('Delete this list?');
               if (!ok) return;
-              try { await deleteList.mutateAsync({ list_id: list.id }); window.history.back(); } catch {}
+              try { await deleteList.mutateAsync({ list_id: list.id }); window.history.back(); } catch { }
             }}>Delete</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => {
+              const items = itemsData?.items || [];
+              if (items.length === 0) {
+                toast({ title: "No items found", description: "Add some music to this list first.", variant: "destructive" });
+                return;
+              }
+
+              const playlistItems = items.map((i: any) => ({ id: i.item_id, type: i.item_type }));
+
+              createPlaylist.mutate({
+                name: list.name,
+                description: list.description || undefined,
+                items: playlistItems
+              }, {
+                onSuccess: (data) => {
+                  toast({ title: "Playlist Created!", description: "Opening in Spotify..." });
+                  window.open(data.externalUrl, '_blank');
+                },
+                onError: (err) => {
+                  toast({ title: "Failed to create playlist", description: err.message, variant: "destructive" });
+                }
+              });
+            }}>Convert to Spotify Playlist</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

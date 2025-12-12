@@ -1,5 +1,6 @@
 // Shared Spotify utilities for Supabase Edge Functions
 // Centralizes token acquisition/caching and resilient fetch with retry/backoff
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 type NormalizedError = {
   status: number;
@@ -60,6 +61,85 @@ export async function getSpotifyToken(): Promise<string> {
   return token;
 }
 
+export async function getSpotifyUserToken(userId: string, supabaseClient: SupabaseClient): Promise<string> {
+  const { data, error } = await supabaseClient
+    .from('spotify_tokens')
+    .select('refresh_token')
+    .eq('user_id', userId)
+    .single();
+
+  if (error || !data) {
+    throw normalizeError(401, 'User not connected to Spotify', 'NO_SPOTIFY_CONNECTION');
+  }
+
+  const clientId = Deno.env.get('SPOTIFY_CLIENT_ID');
+  const clientSecret = Deno.env.get('SPOTIFY_CLIENT_SECRET');
+
+  if (!clientId || !clientSecret) {
+    throw normalizeError(500, 'Spotify credentials are not configured', 'MISSING_SPOTIFY_CREDS');
+  }
+
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: 'Basic ' + btoa(clientId + ':' + clientSecret),
+    },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: data.refresh_token,
+    }),
+  });
+
+  if (!response.ok) {
+    throw normalizeError(response.status, 'Failed to refresh Spotify user token');
+  }
+
+  const tokenData = await response.json();
+
+  // If a new refresh token is returned, update it
+  if (tokenData.refresh_token) {
+    await supabaseClient
+      .from('spotify_tokens')
+      .update({
+        refresh_token: tokenData.refresh_token,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+  }
+
+  return tokenData.access_token as string;
+}
+
+export async function exchangeCodeForTokens(code: string, redirectUri: string): Promise<{ access_token: string; refresh_token: string }> {
+  const clientId = Deno.env.get('SPOTIFY_CLIENT_ID');
+  const clientSecret = Deno.env.get('SPOTIFY_CLIENT_SECRET');
+
+  if (!clientId || !clientSecret) {
+    throw normalizeError(500, 'Spotify credentials are not configured', 'MISSING_SPOTIFY_CREDS');
+  }
+
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: 'Basic ' + btoa(clientId + ':' + clientSecret),
+    },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: redirectUri,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw normalizeError(response.status, `Failed to exchange code: ${errorText}`);
+  }
+
+  return await response.json();
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -79,12 +159,13 @@ type FetchRetryOptions = {
 export async function fetchSpotify(
   url: string,
   init: RequestInit = {},
-  options: FetchRetryOptions = {}
+  options: FetchRetryOptions = {},
+  getToken?: () => Promise<string>
 ): Promise<Response> {
   const retries = options.retries ?? 2;
   const baseBackoffMs = options.baseBackoffMs ?? 250;
 
-  let token = await getSpotifyToken();
+  let token = await (getToken ? getToken() : getSpotifyToken());
   let lastError: unknown = null;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -96,7 +177,7 @@ export async function fetchSpotify(
 
       if (res.status === 401) {
         // refresh token once and retry immediately
-        token = await getSpotifyToken();
+        token = await (getToken ? getToken() : getSpotifyToken());
         if (attempt < retries) {
           continue;
         }
@@ -143,9 +224,10 @@ export async function fetchSpotify(
 export async function fetchSpotifyJson<T = unknown>(
   url: string,
   init?: RequestInit,
-  options?: FetchRetryOptions
+  options?: FetchRetryOptions,
+  getToken?: () => Promise<string>
 ): Promise<T> {
-  const res = await fetchSpotify(url, init, options);
+  const res = await fetchSpotify(url, init, options, getToken);
   return await res.json() as T;
 }
 

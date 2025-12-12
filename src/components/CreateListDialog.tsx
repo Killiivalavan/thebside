@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useCreateList } from "@/hooks/useLists";
 import { useAddListItem } from "@/hooks/useListItems";
 
-type AutoAddItem = { item_id: string; item_type: "album" | "track" | "artist" };
+type AutoAddItem = { item_id: string; item_type: "album" | "track" | "artist" | "playlist" };
 
 interface CreateListDialogProps {
   open: boolean;

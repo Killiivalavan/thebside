@@ -12,18 +12,47 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo } from "react";
 import { useItemsMetadata } from "@/hooks/useItemsMetadata";
 import CreateListDialog from "@/components/CreateListDialog";
-import { Plus } from "lucide-react";
+import { LogOut, Pencil, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { useDisconnectSpotify, useSpotifyConnectionStatus, connectSpotify } from "@/hooks/useSpotify";
+import { useFollowCounts, useFollowStatus, useFollowMutation } from "@/hooks/useFollow";
+
+const FollowStats = ({ userId }: { userId: string }) => {
+  const { data: stats } = useFollowCounts(userId);
+  return (
+    <div className="flex gap-4 text-sm text-muted-foreground mt-1">
+      <div><span className="font-semibold text-foreground">{stats?.followers || 0}</span> followers</div>
+      <div><span className="font-semibold text-foreground">{stats?.following || 0}</span> following</div>
+    </div>
+  );
+};
+
+const FollowButton = ({ targetUserId }: { targetUserId: string }) => {
+  const { data: isFollowing } = useFollowStatus(targetUserId);
+  const { mutate, isPending } = useFollowMutation(targetUserId);
+
+  return (
+    <Button 
+      variant={isFollowing ? "outline" : "default"}
+      size="sm"
+      className={isFollowing ? "text-muted-foreground" : ""}
+      disabled={isPending}
+      onClick={() => mutate(!!isFollowing)}
+    >
+      {isFollowing ? "Following" : "Follow"}
+    </Button>
+  );
+};
 
 const Profile = () => {
   const { username } = useParams();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  
+
   const { data: profileData, isLoading: profileLoading, error: profileError } = useUserProfile(username);
   const { data: reviews, isLoading: reviewsLoading } = useUserReviews(profileData?.id || '');
   const { data: listsData, isLoading: listsLoadingFn } = useMyLists(1, 20);
@@ -33,6 +62,12 @@ const Profile = () => {
   const createList = useCreateList();
   const updateList = useUpdateList();
   const deleteList = useDeleteList();
+
+  // Spotify hooks
+  const { data: isSpotifyConnected, isLoading: isSpotifyStatusLoading } = useSpotifyConnectionStatus();
+  const disconnectSpotify = useDisconnectSpotify();
+
+  // Local state for create list dialog
 
   // Local state for create list dialog
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -171,23 +206,89 @@ const Profile = () => {
       {/* Profile Header */}
       <div className="flex items-start space-x-6">
         <div className="w-32 h-32">
-          <Avatar 
-            src={profileData.avatar_url} 
+          <Avatar
+            src={profileData.avatar_url}
             alt={profileData.username}
             size="xl"
             className="w-32 h-32 border-2 border-border"
           />
         </div>
         <div className="space-y-2 min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-4 w-full">
-            <h2 className="text-3xl font-bold text-foreground truncate md:whitespace-normal md:overflow-visible">
-              {profileData.username}
-            </h2>
-            {isOwnProfile && (
-              <Button variant="secondary" size="sm" onClick={openEdit} className="hover:bg-accent hover:text-accent-foreground transition-colors">
-                Edit profile
-              </Button>
-            )}
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 md:gap-4 w-full">
+            <div>
+              <h2 className="text-3xl font-bold text-foreground break-all md:break-normal">
+                {profileData.username}
+              </h2>
+              {/* Follow Counts */}
+              <FollowStats userId={profileData.id} />
+            </div>
+
+            <div className="flex flex-row items-center gap-2 md:mt-0">
+              {!isOwnProfile && currentUser && (
+                <FollowButton targetUserId={profileData.id} />
+              )}
+              
+              {isOwnProfile && (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={openEdit}
+                    className="hover:bg-accent hover:text-accent-foreground transition-colors rounded-full w-10 h-10 p-0 md:w-auto md:h-9 md:px-3 md:rounded-md"
+                    title="Edit Profile"
+                  >
+                    <Pencil className="w-4 h-4 md:mr-2" />
+                    <span className="hidden md:inline">Edit profile</span>
+                  </Button>
+
+                  {isSpotifyStatusLoading ? (
+                    <Button variant="secondary" size="sm" disabled className="opacity-70 rounded-full w-10 h-10 p-0 md:w-auto md:h-9 md:px-3 md:rounded-md">
+                      <span className="hidden md:inline">Loading...</span>
+                    </Button>
+                  ) : isSpotifyConnected ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={disconnectSpotify.isPending}
+                      className="text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-full w-10 h-10 p-0 md:w-auto md:h-9 md:px-3 md:rounded-md"
+                      onClick={() => {
+                        if (window.confirm("Are you sure you want to disconnect Spotify? You will lose personalized recommendations.")) {
+                          disconnectSpotify.mutate(undefined, {
+                            onSuccess: () => {
+                              toast({ title: "Spotify Disconnected" });
+                            },
+                            onError: () => {
+                              toast({ title: "Failed to disconnect", variant: "destructive" });
+                            }
+                          });
+                        }
+                      }}
+                      title="Disconnect Spotify"
+                    >
+                      {disconnectSpotify.isPending ? (
+                        <span className="hidden md:inline">Disconnecting...</span>
+                      ) : (
+                        <>
+                          <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current md:mr-1.5" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" /></svg>
+                          <span className="hidden md:inline">Disconnect</span>
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="text-[#1DB954] hover:text-[#1ed760] hover:bg-[#1DB954]/10 rounded-full w-10 h-10 p-0 md:w-auto md:h-9 md:px-3 md:rounded-md"
+                      onClick={connectSpotify}
+                      title="Connect Spotify"
+                    >
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current md:mr-1.5" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" /></svg>
+                      <span className="hidden md:inline">Connect</span>
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
           <p className="text-muted-foreground">
             joined on {formatDate(profileData.created_at)}
@@ -236,26 +337,26 @@ const Profile = () => {
           {isOwnProfile && (
             <div className="flex justify-end">
               <div className="flex space-x-2 bg-card border border-border rounded-lg p-1">
-                <Button 
-                  size="sm" 
-                  variant={privacyFilter === 'all' ? 'secondary' : 'ghost'} 
-                  className={`text-xs ${privacyFilter === 'all' ? 'bg-accent text-accent-foreground hover:bg-accent/90' : ''}`} 
+                <Button
+                  size="sm"
+                  variant={privacyFilter === 'all' ? 'secondary' : 'ghost'}
+                  className={`text-xs ${privacyFilter === 'all' ? 'bg-accent text-accent-foreground hover:bg-accent/90' : ''}`}
                   onClick={() => setPrivacyFilter('all')}
                 >
                   ALL
                 </Button>
-                <Button 
-                  size="sm" 
-                  variant={privacyFilter === 'public' ? 'secondary' : 'ghost'} 
-                  className={`text-xs ${privacyFilter === 'public' ? 'bg-accent text-accent-foreground hover:bg-accent/90' : ''}`} 
+                <Button
+                  size="sm"
+                  variant={privacyFilter === 'public' ? 'secondary' : 'ghost'}
+                  className={`text-xs ${privacyFilter === 'public' ? 'bg-accent text-accent-foreground hover:bg-accent/90' : ''}`}
                   onClick={() => setPrivacyFilter('public')}
                 >
                   Public
                 </Button>
-                <Button 
-                  size="sm" 
-                  variant={privacyFilter === 'private' ? 'secondary' : 'ghost'} 
-                  className={`text-xs ${privacyFilter === 'private' ? 'bg-accent text-accent-foreground hover:bg-accent/90' : ''}`} 
+                <Button
+                  size="sm"
+                  variant={privacyFilter === 'private' ? 'secondary' : 'ghost'}
+                  className={`text-xs ${privacyFilter === 'private' ? 'bg-accent text-accent-foreground hover:bg-accent/90' : ''}`}
                   onClick={() => setPrivacyFilter('private')}
                 >
                   Private
@@ -316,37 +417,37 @@ const Profile = () => {
               };
               const listsToRender = renderLists();
               return (
-            <>
-            <div className="space-y-6">
-              {isOwnProfile && (
-                <div className="flex justify-end">
-                  <Button variant="secondary" size="icon" className="rounded-full" aria-label="Create list" onClick={() => setCreateDialogOpen(true)}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-              {(!listsToRender || listsToRender.length === 0) && (
-                <div className="text-center text-muted-foreground">No lists yet. Get started by creating your first list.</div>
-              )}
-              {listsToRender.map((list: any) => (
-                <Link key={list.id} to={`/list/${list.id}`} className="block border border-border rounded-lg p-4 hover:border-primary/50 transition-colors">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h3 className="font-medium text-foreground">{list.name}</h3>
-                      {list.description && (
-                        <p className="text-sm text-muted-foreground mt-1">{list.description}</p>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {typeof list.items_count === 'number' ? list.items_count : (Array.isArray(list.list_items) ? (list.list_items?.length || 0) : 0)} items
-                    </div>
+                <>
+                  <div className="space-y-6">
+                    {isOwnProfile && (
+                      <div className="flex justify-end">
+                        <Button variant="secondary" size="icon" className="rounded-full" aria-label="Create list" onClick={() => setCreateDialogOpen(true)}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    {(!listsToRender || listsToRender.length === 0) && (
+                      <div className="text-center text-muted-foreground">No lists yet. Get started by creating your first list.</div>
+                    )}
+                    {listsToRender.map((list: any) => (
+                      <Link key={list.id} to={`/list/${list.id}`} className="block border border-border rounded-lg p-4 hover:border-primary/50 transition-colors">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="font-medium text-foreground">{list.name}</h3>
+                            {list.description && (
+                              <p className="text-sm text-muted-foreground mt-1">{list.description}</p>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {typeof list.items_count === 'number' ? list.items_count : (Array.isArray(list.list_items) ? (list.list_items?.length || 0) : 0)} items
+                          </div>
+                        </div>
+                        {/* Hide item previews on profile; details should be inside the list page */}
+                      </Link>
+                    ))}
                   </div>
-                  {/* Hide item previews on profile; details should be inside the list page */}
-                </Link>
-              ))}
-            </div>
-            <CreateListDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
-            </>
+                  <CreateListDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+                </>
               );
             })()
           )}

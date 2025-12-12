@@ -44,6 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         redirectTo: `${window.location.origin}/discover`,
       },
     });
+    console.log('Signing in with redirect to:', `${window.location.origin}/discover`);
     if (error) {
       console.error('Error signing in with Google:', error.message);
       throw error;

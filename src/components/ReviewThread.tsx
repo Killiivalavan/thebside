@@ -31,7 +31,7 @@ export type ReviewThread = ReviewWithUser & {
 interface ReviewThreadProps {
   review: ReviewThread;
   item_id: string;
-  item_type: 'album' | 'track' | 'artist';
+  item_type: 'album' | 'track' | 'artist' | 'playlist';
   onReplySuccess: () => void; // Function to trigger a data refresh
 }
 

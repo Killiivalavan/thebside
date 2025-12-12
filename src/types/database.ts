@@ -319,8 +319,8 @@ export type Database = {
       }
     }
     Enums: {
-      item_type: "album" | "track" | "artist"
-      list_item_type: "album" | "track" | "artist"
+      item_type: "album" | "track" | "artist" | "playlist"
+      list_item_type: "album" | "track" | "artist" | "playlist"
       listened_item_type: "album" | "track"
     }
     CompositeTypes: {
@@ -452,8 +452,8 @@ export const Constants = {
   },
   public: {
     Enums: {
-      item_type: ["album", "track", "artist"],
-      list_item_type: ["album", "track", "artist"],
+      item_type: ["album", "track", "artist", "playlist"],
+      list_item_type: ["album", "track", "artist", "playlist"],
       listened_item_type: ["album", "track"],
     },
   },

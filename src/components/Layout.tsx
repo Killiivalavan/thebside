@@ -1,4 +1,4 @@
-import { Search, User, LogOut } from "lucide-react";
+import { Search, User, LogOut, Filter } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -9,9 +9,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Avatar as AvatarComponent } from "@/components/Avatar";
 import { useState, useRef, useEffect } from "react";
 import { useCurrentUserProfile } from "@/hooks/useProfile";
+import { useSearchFilters } from "@/context/SearchFilterContext";
 
 export const Layout = () => {
   const location = useLocation();
@@ -20,6 +28,7 @@ export const Layout = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const debounceMs = 400;
   const isAutoClearing = useRef(false);
+  const { filters, toggleFilter } = useSearchFilters();
 
   const handleSignOut = async () => {
     try {
@@ -122,11 +131,45 @@ export const Layout = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input 
                   placeholder="search albums, artists, tracks..." 
-                  className="pl-10 bg-muted border-border rounded-full"
+                  className="pl-10 pr-12 h-10 bg-muted border-border rounded-full text-base"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleSearchInput}
                 />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1.5 top-1/2 transform -translate-y-1/2 h-8 w-8 rounded-full hover:bg-accent flex items-center justify-center p-0"
+                    >
+                      <Filter className="h-5 w-5 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56" align="end">
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm">Filter Results</h4>
+                      <div className="space-y-2">
+                        {(Object.keys(filters) as Array<keyof typeof filters>).map((key) => (
+                          <div key={key} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={key}
+                              checked={filters[key]}
+                              onCheckedChange={() => toggleFilter(key)}
+                            />
+                            <Label
+                              htmlFor={key}
+                              className="text-sm font-normal capitalize cursor-pointer"
+                            >
+                              {key}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </form>
             </div>
 

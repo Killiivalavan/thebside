@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
 type GetListItemsInput = { list_id: string; page?: number; limit?: number };
-type AddListItemInput = { list_id: string; item_id: string; item_type: 'album' | 'track' | 'artist' };
-type RemoveListItemInput = { list_id: string; item_id: string; item_type: 'album' | 'track' | 'artist' };
+type AddListItemInput = { list_id: string; item_id: string; item_type: 'album' | 'track' | 'artist' | 'playlist' };
+type RemoveListItemInput = { list_id: string; item_id: string; item_type: 'album' | 'track' | 'artist' | 'playlist' };
 
 async function invoke<T>(fn: string, body?: any): Promise<T> {
   const { data, error } = await supabase.functions.invoke(fn, { body });
