@@ -241,6 +241,8 @@ const Profile = () => {
                     <span className="hidden md:inline">Edit profile</span>
                   </Button>
 
+
+                  <div className="hidden">
                   {isSpotifyStatusLoading ? (
                     <Button variant="secondary" size="sm" disabled className="opacity-70 rounded-full w-10 h-10 p-0 md:w-auto md:h-9 md:px-3 md:rounded-md">
                       <span className="hidden md:inline">Loading...</span>
@@ -286,6 +288,8 @@ const Profile = () => {
                       <span className="hidden md:inline">Connect</span>
                     </Button>
                   )}
+                  </div>
+
                 </>
               )}
             </div>

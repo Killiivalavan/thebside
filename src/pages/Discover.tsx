@@ -39,8 +39,10 @@ const Discover = () => {
   useEffect(() => {
     const code = searchParams.get('code');
     if (code) {
+      console.log('Attempting to exchange Spotify code...');
       exchangeSpotifyCode(code)
         .then(async () => {
+          console.log('Spotify code exchange successful!');
           setSearchParams({});
           await queryClient.invalidateQueries({ queryKey: ['spotify-popular'] });
           await queryClient.invalidateQueries({ queryKey: ['spotify-status'] });
@@ -51,10 +53,15 @@ const Discover = () => {
           });
         })
         .catch((err) => {
-          console.error(err);
+          console.error('Spotify connection error:', err);
+          console.error('Error details:', {
+            message: err.message,
+            stack: err.stack,
+            response: err.response,
+          });
           toast({
             title: "Connection Failed",
-            description: "Could not connect to Spotify. Please try again.",
+            description: `Could not connect to Spotify: ${err.message || 'Unknown error'}`,
             variant: "destructive",
           });
         });
@@ -117,7 +124,7 @@ const Discover = () => {
 
       {/* Connect Spotify CTA */}
       {popularContent && !popularContent.isPersonalized && (
-        <div className="bg-card/50 border border-border/50 rounded-lg p-6 text-center max-w-md mx-auto backdrop-blur-sm">
+        <div className="hidden bg-card/50 border border-border/50 rounded-lg p-6 text-center max-w-md mx-auto backdrop-blur-sm">
           <h2 className="text-xl font-semibold mb-2">Personalize Your Experience</h2>
           <p className="text-muted-foreground mb-4 text-sm">Connect your Spotify account to get recommendations based on your listening history.</p>
           <Button
@@ -308,8 +315,8 @@ const Discover = () => {
       <SocialActivityFeed />
 
       {/* Connect Spotify Modal */}
-      <Dialog open={showConnectModal} onOpenChange={(open) => !open && handleCloseModal()}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={false} onOpenChange={(open) => !open && handleCloseModal()}>
+        <DialogContent className="hidden sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-center text-xl">Unlock the Full Experience</DialogTitle>
             <DialogDescription className="text-center pt-2">

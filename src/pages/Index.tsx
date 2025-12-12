@@ -209,8 +209,9 @@ const Index = () => {
         </div>
       </div>
 
+
       {/* Spotify Integration Section */}
-      <div className="relative z-10 bg-muted/30 py-24 px-6 md:px-12 border-t border-border">
+      <div className="hidden relative z-10 bg-muted/30 py-24 px-6 md:px-12 border-t border-border">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12">
           <div className="flex-1 space-y-6">
             <h2 className="text-3xl md:text-4xl font-bold">
@@ -258,6 +259,7 @@ const Index = () => {
           </div>
         </div>
       </div>
+
 
       {/* Footer / Contact */}
       <div className="relative z-10 py-8 text-center text-muted-foreground text-sm bg-background border-t border-border/50">
